@@ -1,56 +1,69 @@
-# PRD - MVP Demo: Anti-Scam PWA (Single Flow)
+# PRD - Đề Án Ứng Dụng Giả Lập Cảnh Báo Lừa Đảo (Anti-Scam Trainer - Zalo Version)
 
-## 1. Demo Objective
-Build a simple web app with 2 interfaces (2 routes) to demonstrate the workflow: A younger person sends a "Spoofed Message" from the Dashboard, the elderly person's device receives the message, taps the link, and an educational/warning screen appears.
+## 1. Mục Tiêu Sản Phẩm (Product Objectives)
+Xây dựng ứng dụng web giả lập tình huống lừa đảo trực quan dành cho **người cao tuổi Việt Nam** dựa trên thói quen sử dụng ứng dụng **Zalo**:
+- **Logo chính thức**: Sử dụng logo Zalo xanh chuẩn ([/zalo-logo.svg](file:///Users/vothanhthong/Documents/unesco/app/public/zalo-logo.svg)) làm biểu tượng chính cho ứng dụng, header, và biểu tượng cài đặt app trên màn hình điện thoại.
+- **Giao diện Zalo mô phỏng (Learner Interface)**: Tái tạo chính xác giao diện nhắn tin Zalo (Header, bong bóng chat, thẻ xem trước link lừa đảo, mascot Zalo, thanh nhập liệu), giúp người già có cảm giác chân thực nhất khi luyện tập.
+- **Trang điều khiển kịch bản phong phú (`/trigger`)**: Cung cấp **10+ tình huống lừa đảo phổ biến tại Việt Nam** (Tin nhắn Zalo, Cuộc gọi Video Call Deepfake, Giả danh công an/bệnh viện, Phạt nguội, Tuyển CTV, Đầu tư tài chính...).
+- **Route mặc định (`/`)**: Truy cập thẳng vào màn hình Zalo của thiết bị Người học (Người cao tuổi), tự động sinh mã kết nối 4 số.
+- **Biểu tượng (Icon)**: Thư viện `lucide-react` kết hợp với phong cách chuẩn Zalo. 100% Giao diện Tiếng Việt.
 
-## 2. Proposed Tech Stack for AI Code Generation
-- **Framework**: Next.js (App Router) for both interfaces to easily keep them in one project (Monorepo) or React.js (Vite).
-- **Styling**: Tailwind CSS (Dark mode for Instructor Dashboard, light mobile-style interface for Learner).
-- **Realtime/State**: Use `socket.io` (if Node.js server), Supabase Realtime, or simplest for demo: store state in a JSON file/In-memory database (using Next.js API Routes + client-side `setInterval` polling every 2 seconds to check for new notifications). AI should prioritize the fastest local setup.
+---
 
-## 3. URL Architecture
-Project has 2 main routes:
+## 2. Kiến Trúc Tuyến Đường (URL Architecture)
 
-| Route | Audience | Interface |
-|-------|----------|-----------|
-| `/toolkit` | Young person (Instructor) | Desktop/Tablet |
-| `/learner` | Elderly person (Learner) | Simulated Mobile screen |
+| Đường dẫn (URL) | Đối tượng | Giao diện & Chức năng |
+|---|---|---|
+| `/` (Mặc định) | **Người học (Learner)** | **Mô phỏng Zalo App**: Sử dụng logo Zalo chuẩn. Hiển thị mã kết nối 4 số, khung chat Zalo nhận tin nhắn/cuộc gọi lừa đảo, bấm nút Xóa/Báo cáo hoặc Bấm vào link để kích hoạt Cảnh báo Sập bẫy. |
+| `/trigger` | **Người hướng dẫn (Instructor)** | Bảng điều khiển chọn **10+ Kịch bản lừa đảo** (chia nhóm: SMS/Zalo, Video Call Deepfake, Đầu tư/CTV...), tùy chỉnh nội dung & gửi tới thiết bị học viên thời gian thực. |
+| `/learner` | *Tương thích* | Chuyển hướng (Redirect) về `/`. |
+| `/toolkit` | *Tương thích* | Chuyển hướng (Redirect) về `/trigger`. |
 
-## 4. Detailed Flow to Implement
+---
 
-### Step 1: Initialization & Pairing
-**`/learner` screen:**
-- Auto-generates a 4-digit **Session ID** (e.g., `1234`) on load.
-- Displays prominently: **"Your device code: 1234. Waiting for connection..."**
+## 3. Danh Sách 10+ Kịch Bản Lừa Đảo (Scenario Placeholders)
 
-**`/toolkit` screen:**
-- Input field: **"Enter your relative's device code"**
-- Enter `1234` → click **"Connect"**
-- On success: UI switches to Dashboard. `/learner` switches to **"Ready (hidden/background)"** state.
+### Nhóm A: Lừa đảo qua Tin nhắn Zalo & SMS
+1. 🚗 **Phạt Nguội Giao Thông**: Giả danh Cục CSGT thông báo vi phạm giao thông, yêu cầu bấm link `phatnguoicontrol.gov.vn` để nộp phạt.
+2. 🏦 **Khóa Tài Khoản Ngân Hàng**: Giả danh Ngân hàng cảnh báo tài khoản bị xâm nhập, yêu cầu truy cập link giả lập để xác minh OTP.
+3. 🎁 **Trúng Thưởng Zalo / Tri Ân**: Thông báo trúng xe máy/điện thoại iPhone, yêu cầu nộp trước phí làm hồ sơ 500k.
+4. 📦 **Bưu Kiện Hỏa Tốc Bị Giữ**: Giả danh Viettel Post/GHTK thông báo hàng chứa chất cấm, yêu cầu chuyển khoản tiền xác minh.
+5. 👤 **Mượn Tiền Giả Danh Con Cháu**: Kẻ gian hack/tạo Zalo giống hệt con cháu nhắn tin: *"Mẹ ơi chuyển gấp cho con 5 triệu mua đồ..."*.
 
-### Step 2: Trigger Scam Scenario
-**`/toolkit` screen:**
-- Shows 1 Card (button): **"Scenario: Traffic Fine Scam"**
-- On click → small Form appears:
-  - **Sender Name**: (Default: `POLICE DEPARTMENT`)
-  - **Content**: `"You have violated traffic law. Access phatnguoivn.com to pay fine or your account will be locked."`
-  - Button: **"Send Simulation"**
-- On send → calls `POST /api/scam/trigger` with payload:
-```json
-{
-  "session_id": "1234",
-  "type": "sms",
-  "sender": "POLICE DEPARTMENT",
-  "content": "You have violated traffic law. Access phatnguoivn.com to pay fine or your account will be locked."
-}
-```
+### Nhóm B: Lừa đảo qua Cuộc gọi Video Call / Deepfake
+6. 🎥 **Deepfake Video Call Công An**: Giả lập cuộc gọi Video Call khuôn mặt công an đứng tại trụ sở, yêu cầu chuyển tiền vào tài khoản tạm giữ để điều tra.
+7. 🚑 **Cuộc Gọi Cấp Cứu Khẩn Cấp**: Giả danh bác sĩ/bệnh viện gọi điện báo con em bị tai nạn cấp cứu, đòi nộp gấp tiền viện phí.
 
-### Step 3: Elderly Receives & Reacts (Simulate & React)
-**`/learner` screen:**
-- Client continuously polls API (or receives socket event). On `"triggered"` signal → immediately renders a **Push Notification** or **SMS App UI** simulation on mobile.
-- Notification shows: Sender + Text from Step 2. Contains a **clickable blue spoof link**.
-- **Interaction 1 (Ignore)**: **"Delete message"** button → calls API to report `"Passed"` to `/toolkit`.
-- **Interaction 2 (Fall for it)**: Tap the link → instantly shows **full-screen red warning Modal/Popup**: **"YOU'VE BEEN SCAMMED!"** with explanation: *"This is a simulation. NEVER click links from unknown messages demanding payment."* → calls API to report `"Failed"` to `/toolkit`.
+### Nhóm C: Lừa đảo Đầu tư & Việc làm Online
+8. 💻 **Tuyển Cộng Tác Viên Chốt Đơn**: Mời người già làm việc nhẹ nhàng tại nhà, chốt đơn Shopee/Lazada hưởng hoa hồng 20%.
+9. 📈 **Tư Vấn Đầu Tư Tài Chính Siêu Lợi Nhuận**: Mời vào nhóm Zalo tư vấn chứng khoán/tiền số với cam kết lãi 10%/ngày.
+10. 🧧 **Trợ Cấp Xã Hội / Quỹ Từ Thiện**: Giả danh Hội Chữ thập đỏ thông báo người cao tuổi được nhận trợ cấp 2 triệu, yêu cầu nộp phí duy trì.
 
-### Step 4: View Results (Reporting)
-**`/toolkit` screen:** Receives event/polling and updates Session `1234` status from **"Sent"** → **"Failed (Trapped)"** or **"Safe (Passed)"**.
+---
+
+## 4. Luồng Trải Nghiệm Chi Tiết (Detailed User Flow)
+
+### Step 1: Kết Nối Thiết Bị
+- Tại `/`: Học viên thấy mã 4 chữ số trên giao diện Zalo (VD: `8899`) và biểu tượng App Zalo chuẩn.
+- Tại `/trigger`: Người hướng dẫn nhập `8899` để kết nối.
+
+### Step 2: Chọn Kịch Bản Lừa Đảo (Trigger)
+- Người hướng dẫn chọn 1 trong 10 kịch bản ở màn hình `/trigger`.
+- Với kịch bản Tin nhắn Zalo: Gửi nội dung tin nhắn + link lừa đảo.
+- Với kịch bản Video Call / Cuộc gọi: Gửi tín hiệu kích hoạt màn hình cuộc gọi Zalo đến (Zalo Video Call UI).
+
+### Step 3: Phản Ứng Trên Giao Diện Zalo (Learner)
+- Màn hình Zalo hiển thị tin nhắn/cuộc gọi đến.
+- **Xử lý Đúng (Phát hiện lừa đảo)**: Bấm **Xóa tin nhắn / Tháo chạy / Báo xấu** → Hiện Modal **Chúc Mừng (Xanh)**: *"Tuyệt vời! Bạn đã nhận diện lừa đảo thành công."*
+- **Xử lý Sai (Bị mắc bẫy)**: Bấm vào link lừa đảo / Chấp nhận chuyển khoản → Hiện Modal **CẢNH BÁO LỪA ĐẢO (Đỏ rực)**: *"⚠️ BẠN ĐÃ BỊ LỪA ĐẢO! Đây là bài tập giả lập..."*
+
+---
+
+## 5. Quy Chuẩn Giao Diện Zalo Mô Phỏng
+- **Logo App**: Sử dụng file [/zalo-logo.svg](file:///Users/vothanhthong/Documents/unesco/app/public/zalo-logo.svg) làm logo ứng dụng.
+- **Header**: Nút quay lại (`<`), Avatar & Tên liên hệ ("Cẩm Bình", "Bộ Công An",...), Icon Gọi điện, Icon Video Call, Icon Menu `...`.
+- **Thân chat (Chat Body)**:
+  - Background màu xanh xám nhạt Zalo đặc trưng (`#e5effa`).
+  - Bong bóng tin nhắn trắng (người gửi) và xanh dương nhạt (người nhận).
+  - Thẻ Xem trước Liên kết (Link Preview Card) đẹp mắt chứa tiêu đề & link bấm lừa đảo.
+- **Footer**: Mascot Zalo icon, ô nhập "Tin nhắn", icon Micro, icon Hình ảnh, icon Tùy chọn `...`.
