@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { triggerScam, getSession } from "@/lib/store";
 
-// Configure VAPID details once
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+const vapidEmail = process.env.VAPID_EMAIL;
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+if (vapidEmail && vapidPublicKey && vapidPrivateKey) {
+  webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -29,9 +30,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Send Web Push notification if the learner has subscribed
+  // Send Web Push notification if the learner has subscribed and VAPID is configured.
   const session = getSession(session_id);
-  if (session?.pushSubscription) {
+  if (session?.pushSubscription && vapidEmail && vapidPublicKey && vapidPrivateKey) {
     try {
       await webpush.sendNotification(
         session.pushSubscription as webpush.PushSubscription,
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
       console.error("[Push] Failed to send notification:", err);
     }
   } else {
-    console.log(`[Push] No push subscription for session ${session_id}, skipping`);
+    console.log(`[Push] No push subscription or VAPID config for session ${session_id}, skipping`);
   }
 
   return NextResponse.json({ success: true, pushed: !!session?.pushSubscription });
