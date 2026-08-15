@@ -1,27 +1,26 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import Image from "next/image";
 import {
-  ChevronLeft,
+  CaretLeft as ChevronLeft,
   Phone,
-  Video,
-  MoreHorizontal,
-  Mic,
-  ImageIcon,
-  Smile,
-  Trash2,
-  AlertTriangle,
-  CheckCircle2,
+  VideoCamera as Video,
+  DotsThree as MoreHorizontal,
+  Microphone as Mic,
+  Image as ImageIcon,
+  Smiley as Smile,
+  Trash as Trash2,
+  Warning as AlertTriangle,
+  CheckCircle as CheckCircle2,
   Bell,
-  BellOff,
+  BellSlash as BellOff,
+  MagnifyingGlass,
   Shield,
-  Wifi,
-  Battery,
-  Signal,
-} from "lucide-react";
+} from "@phosphor-icons/react";
+import { useLocale } from "@/i18n/LocaleProvider";
+import styles from "./learner.module.css";
 
-type SessionStatus = "waiting" | "paired" | "triggered" | "passed" | "failed";
+type SessionStatus = "waiting" | "paired" | "triggered" | "passed" | "failed" | "closed";
 type PushState = "idle" | "requesting" | "subscribed" | "denied" | "unsupported";
 
 interface ScamPayload {
@@ -42,20 +41,94 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   return buffer;
 }
 
-function getTimeString() {
-  const now = new Date();
-  return now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+type RiskCategory = "urgency" | "money" | "link" | "impersonation" | "reward";
+
+interface RiskHighlight {
+  start: number;
+  end: number;
+  phrase: string;
+  category: RiskCategory;
+}
+
+const RISK_PATTERNS: Array<{ category: RiskCategory; pattern: RegExp }> = [
+  { category: "link", pattern: /(?:https?:\/\/)?[a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,}(?:\/\S*)?/giu },
+  { category: "urgency", pattern: /\b(?:gấp|khẩn cấp|ngay|trong \d+ giờ|24 giờ|urgent|immediately|within \d+ hours?)\b/giu },
+  { category: "money", pattern: /\b(?:chuyển tiền|chuyển khoản|tiền|phí|otp|mã otp|bank account|transfer|payment|money)\b/giu },
+  { category: "impersonation", pattern: /\b(?:công an|cảnh sát|bệnh viện|ngân hàng|tài khoản|xác minh|police|hospital|bank|account|verify)\b/giu },
+  { category: "reward", pattern: /\b(?:trúng thưởng|nhận thưởng|quà|giải thưởng|prize|reward|won|winner)\b/giu },
+];
+
+function findRiskHighlights(content: string): RiskHighlight[] {
+  const candidates: RiskHighlight[] = [];
+  for (const { category, pattern } of RISK_PATTERNS) {
+    for (const match of content.matchAll(pattern)) {
+      if (match.index === undefined) continue;
+      candidates.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        phrase: match[0],
+        category,
+      });
+    }
+  }
+
+  return candidates
+    .sort((left, right) => left.start - right.start || right.end - right.start)
+    .filter((candidate, index, all) => !all.slice(0, index).some((previous) => candidate.start < previous.end && candidate.end > previous.start))
+    .sort((left, right) => left.start - right.start);
 }
 
 export default function LearnerPage() {
+  const { locale, copy, formatTime } = useLocale();
+  const text = copy.learner;
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [status, setStatus] = useState<SessionStatus>("waiting");
   const [scam, setScam] = useState<ScamPayload | null>(null);
   const [showWarning, setShowWarning] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [pushState, setPushState] = useState<PushState>("idle");
+  const [showReview, setShowReview] = useState(false);
+  const [pushState, setPushState] = useState<PushState>(() =>
+    typeof window !== "undefined" && "serviceWorker" in navigator ? "idle" : "unsupported"
+  );
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [msgTime] = useState(getTimeString());
+  const msgTime = formatTime(new Date());
+
+  const startWaitingSession = useCallback(async () => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    localStorage.removeItem("zalo_session_id");
+    setShowWarning(false);
+    setShowSuccess(false);
+    setShowReview(false);
+    setScam(null);
+    setSessionId(null);
+    setStatus("waiting");
+    setPushState(typeof window !== "undefined" && "serviceWorker" in navigator ? "idle" : "unsupported");
+    try {
+      const response = await fetch("/api/session/create", { method: "POST" });
+      if (!response.ok) throw new Error("Failed to create session");
+      const data = await response.json() as { session_id: string };
+      localStorage.setItem("zalo_session_id", data.session_id);
+      setSessionId(data.session_id);
+    } catch (error) {
+      console.error("Session reset error:", error);
+    }
+  }, []);
+
+  const closeReview = useCallback(() => {
+    setShowReview(false);
+    setShowWarning(false);
+    setShowSuccess(false);
+    setStatus("paired");
+  }, []);
+
+  useEffect(() => {
+    if (!showReview) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeReview();
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [showReview, closeReview]);
 
   // Create or restore session on mount
   useEffect(() => {
@@ -68,34 +141,29 @@ export default function LearnerPage() {
           const checkRes = await fetch(`/api/session/status?session_id=${savedId}`);
           if (checkRes.ok) {
             const checkData = await checkRes.json();
-            // Reuse session if not in a terminal state
-            if (checkData.status && checkData.status !== "expired") {
+            // Reuse only sessions that can still receive a pairing or simulation.
+            const reusableStatuses: SessionStatus[] = ["waiting", "paired", "triggered"];
+            if (reusableStatuses.includes(checkData.status as SessionStatus)) {
               setSessionId(savedId);
               setStatus(checkData.status);
               if (checkData.scam) setScam(checkData.scam);
               console.log("[Session] Restored session:", savedId);
               return;
             }
+            localStorage.removeItem("zalo_session_id");
           }
         }
-        // Create a new session
-        const res = await fetch("/api/session/create", { method: "POST" });
-        if (!res.ok) throw new Error("Failed to create session");
-        const data = await res.json();
-        localStorage.setItem("zalo_session_id", data.session_id);
-        setSessionId(data.session_id);
-        console.log("[Session] Created new session:", data.session_id);
+        await startWaitingSession();
       } catch (err) {
         console.error("Session init error:", err);
       }
     }
     init();
-  }, []);
+  }, [startWaitingSession]);
 
   // Register service worker + listen for messages from SW
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
-      setPushState("unsupported");
       return;
     }
     navigator.serviceWorker.register("/sw.js").catch(console.error);
@@ -141,15 +209,16 @@ export default function LearnerPage() {
       const reg = await navigator.serviceWorker.ready;
       const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
       if (!vapidKey) throw new Error("VAPID key missing");
-      const subscription = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
-      });
-      await fetch("/api/session/subscribe", {
+      const subscription = await reg.pushManager.getSubscription() ?? await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        });
+      const response = await fetch("/api/session/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: sessionId, subscription: subscription.toJSON() }),
       });
+      if (!response.ok) throw new Error("Unable to save push subscription");
       setPushState("subscribed");
     } catch (err) {
       console.error("[Push] error:", err);
@@ -163,10 +232,14 @@ export default function LearnerPage() {
       const res = await fetch(`/api/session/status?session_id=${sessionId}`);
       if (!res.ok) return;
       const data = await res.json();
+      if (data.status === "closed") {
+        await startWaitingSession();
+        return;
+      }
       setStatus(data.status);
       if (data.scam) setScam(data.scam);
     } catch { /* ignore */ }
-  }, [sessionId]);
+  }, [sessionId, startWaitingSession]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -214,275 +287,204 @@ export default function LearnerPage() {
     return (
       <span style={{ lineHeight: 1.6 }}>
         {parts[0]}
-        <span
+        <button
+          type="button"
+          aria-label={locale === "en" ? `Open ${link}` : `Mở ${link}`}
           onClick={handleTapLink}
-          style={{ color: "#0068ff", textDecoration: "underline", cursor: "pointer", fontWeight: 600 }}
+          style={{ color: "var(--primary-dark)", textDecoration: "underline", cursor: "pointer", fontWeight: 600, border: 0, padding: 0, background: "none", font: "inherit" }}
         >
           {link}
-        </span>
+        </button>
         {parts[1]}
       </span>
     );
   };
 
-  return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#f0f0f0",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }}>
-      {/* ── WARNING MODAL (Đỏ) ── */}
-      {showWarning && (
-        <div
-          className="animate-danger-flash"
-          style={{
-            position: "fixed", inset: 0, zIndex: 200,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "2rem",
-            background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
-          }}
+  const reviewHighlights = scam ? findRiskHighlights(scam.content) : [];
+  const riskReasonByCategory: Record<RiskCategory, string> = {
+    urgency: text.riskUrgency,
+    money: text.riskMoney,
+    link: text.riskLink,
+    impersonation: text.riskImpersonation,
+    reward: text.riskReward,
+  };
+  const reviewCategories = Array.from(new Set(reviewHighlights.map((highlight) => highlight.category)));
+
+  function renderReviewedMessage(content: string) {
+    if (reviewHighlights.length === 0) return content;
+    const parts: React.ReactNode[] = [];
+    let cursor = 0;
+    reviewHighlights.forEach((highlight, index) => {
+      if (highlight.start > cursor) parts.push(<span key={`text-${index}`}>{content.slice(cursor, highlight.start)}</span>);
+      parts.push(
+        <mark
+          key={`risk-${index}`}
+          className={styles.riskHighlight}
+          title={riskReasonByCategory[highlight.category]}
         >
-          <div className="animate-fade-in-scale" style={{ textAlign: "center", maxWidth: "380px", color: "white" }}>
-            <div style={{
-              width: 100, height: 100, borderRadius: "50%",
-              background: "rgba(255,255,255,0.2)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 1.5rem",
-              animation: "shake 0.6s ease-in-out 2",
-            }}>
-              <AlertTriangle size={52} color="white" />
+          {highlight.phrase}
+        </mark>
+      );
+      cursor = highlight.end;
+    });
+    if (cursor < content.length) parts.push(<span key="text-end">{content.slice(cursor)}</span>);
+    return parts;
+  }
+
+  return (
+    <div className={styles.page}>
+      {(showWarning || showSuccess) && (
+        <div className={styles.resultOverlay} role="alertdialog" aria-modal="true" aria-labelledby="result-title">
+          <div className={`${styles.resultCard} ${showWarning ? styles.resultFailure : styles.resultSuccess}`}>
+            <div className={styles.resultIcon} aria-hidden="true">
+              {showWarning ? <AlertTriangle size={32} /> : <CheckCircle2 size={32} />}
             </div>
-            <h1 style={{
-              fontSize: "clamp(1.6rem, 6vw, 2.2rem)", fontWeight: 900,
-              marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "1px",
+            <p className={styles.resultKicker}>{text.training}</p>
+            <h1 id="result-title">{showWarning ? text.failedTitle : text.passedTitle}</h1>
+            <p>{showWarning ? text.failedBody : text.passedBody}</p>
+            <button className={styles.reviewButton} type="button" onClick={() => {
+              setShowWarning(false);
+              setShowSuccess(false);
+              setShowReview(true);
             }}>
-              Bạn Đã Bị Lừa Đảo!
-            </h1>
-            <div style={{
-              background: "rgba(0,0,0,0.25)", borderRadius: "16px",
-              padding: "1.25rem", marginBottom: "1.5rem",
-            }}>
-              <p style={{ fontSize: "1.05rem", lineHeight: 1.75, opacity: 0.95 }}>
-                <strong>Đây là bài tập giả lập.</strong>
-                <br /><br />
-                KHÔNG BAO GIỜ bấm vào các đường link trong tin nhắn yêu cầu nộp tiền phạt, xác nhận tài khoản hoặc nhận quà thưởng.
-                <br /><br />
-                Cơ quan nhà nước không bao giờ gửi link thu tiền qua Zalo hay SMS.
-              </p>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: 0.75, fontSize: "0.85rem" }}>
-              <Shield size={14} />
-              Bài tập huấn luyện phòng tránh lừa đảo
-            </div>
+              <MagnifyingGlass size={18} aria-hidden="true" />
+              {text.reviewMessage}
+            </button>
           </div>
         </div>
       )}
 
-      {/* ── SUCCESS MODAL (Xanh) ── */}
-      {showSuccess && (
-        <div
-          style={{
-            position: "fixed", inset: 0, zIndex: 200,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "2rem",
-            background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+      {showReview && scam && (
+          <div
+          className={styles.reviewOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="review-title"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) closeReview();
           }}
         >
-          <div className="animate-fade-in-scale" style={{ textAlign: "center", maxWidth: "380px", color: "white" }}>
-            <div style={{
-              width: 100, height: 100, borderRadius: "50%",
-              background: "rgba(255,255,255,0.2)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 1.5rem",
-            }}>
-              <CheckCircle2 size={52} color="white" />
+          <div className={styles.reviewPanel}>
+            <div className={styles.reviewHeader}>
+              <div>
+                <p className={styles.resultKicker}>{text.training}</p>
+                <h1 id="review-title">{text.reviewTitle}</h1>
+              </div>
+              <button className={styles.reviewClose} type="button" onClick={closeReview} aria-label={text.closeReview}>{text.closeReview}</button>
             </div>
-            <h1 style={{
-              fontSize: "clamp(1.6rem, 6vw, 2.2rem)", fontWeight: 900,
-              marginBottom: "0.75rem",
-            }}>
-              Xuất Sắc! Bạn đã cảnh giác!
-            </h1>
-            <div style={{
-              background: "rgba(0,0,0,0.2)", borderRadius: "16px",
-              padding: "1.25rem", marginBottom: "1.5rem",
-            }}>
-              <p style={{ fontSize: "1.05rem", lineHeight: 1.75, opacity: 0.95 }}>
-                Bạn đã nhận diện và xóa tin nhắn lừa đảo thành công!
-                <br /><br />
-                Hãy luôn nghi ngờ các tin nhắn yêu cầu khẩn cấp, chứa đường link lạ hoặc đề nghị chuyển tiền.
-              </p>
+            <p className={styles.reviewBody}>{text.reviewBody}</p>
+            <div className={styles.reviewMessageCard}>{renderReviewedMessage(scam.content)}</div>
+            <div className={styles.reviewCues}>
+              <p className={styles.reviewCuesTitle}>{text.reviewCuesTitle}</p>
+              {reviewCategories.length > 0 ? reviewCategories.map((category) => (
+                <p className={styles.reviewCue} key={category}>
+                  <span className={styles.reviewCueDot} aria-hidden="true" />
+                  {riskReasonByCategory[category]}
+                </p>
+              )) : <p className={styles.reviewBody}>{text.reviewNoCues}</p>}
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: 0.75, fontSize: "0.85rem" }}>
-              <Shield size={14} />
-              Bài tập huấn luyện phòng tránh lừa đảo
-            </div>
+            <button className={styles.reviewDone} type="button" onClick={closeReview}>{text.closeReview}</button>
           </div>
         </div>
       )}
 
       {/* ── PHONE FRAME ── */}
-      <div style={{
-        width: "100%",
-        maxWidth: 420,
-        minHeight: "100dvh",
-        background: "#ffffff",
-        display: "flex",
-        flexDirection: "column",
-        position: "relative",
-        overflow: "hidden",
-        boxShadow: "0 0 60px rgba(0,0,0,0.15)",
-      }}>
-        {/* Status Bar */}
-        <div style={{
-          height: 44,
-          background: "#0068ff",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 16px",
-          flexShrink: 0,
-        }}>
-          <span style={{ color: "white", fontSize: "0.8rem", fontWeight: 700 }}>
-            {new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-          </span>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Signal size={14} color="white" />
-            <Wifi size={14} color="white" />
-            <Battery size={14} color="white" />
-          </div>
-        </div>
-
-        {/* Zalo Header */}
-        <div style={{
-          height: 56,
-          background: "#0068ff",
-          display: "flex",
-          alignItems: "center",
-          padding: "0 8px 0 4px",
-          gap: 6,
-          flexShrink: 0,
-        }}>
-          <button style={{ padding: 8, background: "none", border: "none", cursor: "pointer", display: "flex" }}>
-            <ChevronLeft size={24} color="white" />
+      <div className={styles.phone}>
+        <div className={styles.chatHeader}>
+          <button aria-label={locale === "en" ? "Go back" : "Quay lại"} style={{ padding: 8, background: "none", border: "none", cursor: "pointer", display: "flex" }}>
+            <ChevronLeft size={32} color="white" />
           </button>
 
-          {/* Avatar */}
-          <div style={{
-            width: 38, height: 38, borderRadius: "50%",
-            background: "linear-gradient(135deg, #60a5fa 0%, #2563eb 100%)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0,
-          }}>
-            {scam ? (
-              <span style={{ fontSize: "1.2rem" }}>
-                {scam.sender.includes("AN") || scam.sender.includes("CÔNG") ? "👮" :
-                 scam.sender.includes("NGÂN HÀNG") || scam.sender.includes("BANK") ? "🏦" : "👤"}
-              </span>
-            ) : (
-              <span style={{ color: "white", fontWeight: 700, fontSize: "1rem" }}>Z</span>
-            )}
-          </div>
-
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: "white", fontWeight: 700, fontSize: "0.95rem", lineHeight: 1.2 }}>
-              {scam ? scam.sender : status === "waiting" ? "Đang chờ kết nối..." : "Đã kết nối"}
+            <div style={{ color: "white", fontWeight: 650, fontSize: "1.1rem", lineHeight: 1.2 }}>
+              {scam ? scam.sender : status === "waiting" ? text.waiting : text.connected}
             </div>
             {scam && (
               <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.72rem" }}>
-                Vừa hoạt động
+                {text.activeNow}
               </div>
             )}
           </div>
 
-          <button style={{ padding: 8, background: "none", border: "none", cursor: "pointer" }}>
-            <Phone size={20} color="white" />
+          <button aria-label={locale === "en" ? "Call" : "Gọi điện"} style={{ padding: 8, background: "none", border: "none", cursor: "pointer" }}>
+            <Phone size={27} color="white" />
           </button>
-          <button style={{ padding: 8, background: "none", border: "none", cursor: "pointer" }}>
-            <Video size={20} color="white" />
+          <button aria-label={locale === "en" ? "Video call" : "Gọi video"} style={{ padding: 8, background: "none", border: "none", cursor: "pointer" }}>
+            <Video size={28} color="white" />
           </button>
-          <button style={{ padding: 8, background: "none", border: "none", cursor: "pointer" }}>
-            <MoreHorizontal size={20} color="white" />
+          <button aria-label={locale === "en" ? "More options" : "Tùy chọn khác"} style={{ padding: 8, background: "none", border: "none", cursor: "pointer" }}>
+            <MoreHorizontal size={29} color="white" />
           </button>
         </div>
 
         {/* Chat Body */}
-        <div style={{
-          flex: 1,
-          background: "#e5effa",
-          overflowY: "auto",
-          padding: "16px 12px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-        }}>
+        <div className={styles.chatBody} aria-live="polite">
 
           {/* ── WAITING STATE ── */}
-          {status === "waiting" && sessionId && (
+          {status === "waiting" && (
             <div className="animate-fade-in" style={{
               display: "flex", flexDirection: "column",
               alignItems: "center", justifyContent: "center",
               flex: 1, gap: 20, paddingTop: 40, paddingBottom: 40,
             }}>
-              {/* Logo Zalo */}
-              <div style={{
-                width: 80, height: 80, borderRadius: "20px",
-                overflow: "hidden",
-                boxShadow: "0 4px 20px rgba(0,104,255,0.25)",
-              }}>
-                <Image src="/zalo-logo.svg" alt="Zalo" width={80} height={80} />
+              <div className={styles.waitingMark} aria-label="Second Thought">
+                <span /><span /><span /><span />
               </div>
 
               <div style={{ textAlign: "center" }}>
-                <p style={{ color: "#64748b", fontSize: "0.85rem", marginBottom: 6 }}>
-                  Mã kết nối thiết bị của bạn
-                </p>
-                <div style={{
-                  fontSize: "3.5rem", fontWeight: 900,
-                  letterSpacing: "16px", color: "#0068ff",
-                  fontVariantNumeric: "tabular-nums",
-                  textShadow: "0 2px 8px rgba(0,104,255,0.2)",
-                }}>
-                  {sessionId}
-                </div>
+                 {sessionId ? (
+                   <>
+                     <p style={{ color: "#64748b", fontSize: "0.85rem", marginBottom: 6 }}>
+                       {text.deviceCode}
+                     </p>
+                     <div style={{
+                       fontSize: "3.5rem", fontWeight: 900,
+                       letterSpacing: "16px", color: "var(--primary)",
+                       fontVariantNumeric: "tabular-nums",
+                       textShadow: "0 2px 8px rgba(0,104,255,0.2)",
+                     }}>
+                       {sessionId}
+                     </div>
+                   </>
+                 ) : (
+                   <p style={{ color: "#64748b", fontSize: "0.85rem" }}>{text.creatingSession}</p>
+                 )}
               </div>
 
               <div style={{
                 display: "flex", alignItems: "center", gap: 8,
                 background: "white", borderRadius: 24, padding: "10px 20px",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
               }}>
                 <div className="dot-pulse">
                   <span /><span /><span />
                 </div>
                 <span style={{ color: "#64748b", fontSize: "0.85rem", fontWeight: 500 }}>
-                  Đang chờ người hướng dẫn kết nối...
+                  {text.waitingGuide}
                 </span>
               </div>
 
               {/* Push Notification Banner */}
-              {pushState === "idle" && (
+               {sessionId && pushState === "idle" && (
                 <div className="animate-fade-in" style={{
                   background: "white", borderRadius: 16, padding: "16px",
                   width: "100%", maxWidth: 340,
-                  boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-                  border: "1.5px solid #dbeafe",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                  border: "1.5px solid #b7d7dd",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: "50%",
                       background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center",
                     }}>
-                      <Bell size={18} color="#0068ff" />
+                      <Bell size={18} color="var(--primary)" />
                     </div>
                     <div>
-                      <p style={{ fontWeight: 700, color: "#1e40af", fontSize: "0.85rem", margin: 0 }}>
-                        Bật thông báo đẩy
+                       <p style={{ fontWeight: 700, color: "var(--primary-dark)", fontSize: "0.85rem", margin: 0 }}>
+                         {text.enablePush}
                       </p>
                       <p style={{ color: "#64748b", fontSize: "0.75rem", margin: 0 }}>
-                        Nhận cảnh báo ngay cả khi tắt màn hình
+                         {text.pushHint}
                       </p>
                     </div>
                   </div>
@@ -491,16 +493,16 @@ export default function LearnerPage() {
                     style={{
                       width: "100%", padding: "10px",
                       borderRadius: 10, border: "none",
-                      background: "linear-gradient(135deg, #0068ff 0%, #0052cc 100%)",
+                        background: "var(--primary)",
                       color: "white", fontWeight: 700, fontSize: "0.85rem",
                       cursor: "pointer",
                     }}
                   >
-                    Cho phép thông báo
+                     {text.allowPush}
                   </button>
                 </div>
               )}
-              {pushState === "subscribed" && (
+               {sessionId && pushState === "subscribed" && (
                 <div style={{
                   display: "flex", alignItems: "center", gap: 8,
                   background: "#f0fdf4", border: "1.5px solid #bbf7d0",
@@ -508,10 +510,10 @@ export default function LearnerPage() {
                   color: "#16a34a", fontSize: "0.82rem", fontWeight: 600,
                 }}>
                   <Bell size={14} color="#16a34a" />
-                  Thông báo đẩy đã được bật thành công
+                   {text.pushEnabled}
                 </div>
               )}
-              {pushState === "denied" && (
+               {sessionId && pushState === "denied" && (
                 <div style={{
                   background: "#fef2f2", border: "1.5px solid #fecaca",
                   borderRadius: 12, padding: "10px 16px",
@@ -519,7 +521,7 @@ export default function LearnerPage() {
                   display: "flex", alignItems: "center", gap: 8,
                 }}>
                   <BellOff size={14} />
-                  Thông báo bị chặn. Vào Cài đặt → Trình duyệt → Thông báo để bật lại.
+                   {text.pushDenied}
                 </div>
               )}
             </div>
@@ -539,10 +541,10 @@ export default function LearnerPage() {
               }}>
                 <CheckCircle2 size={32} color="#16a34a" />
               </div>
-              <p style={{ color: "#1e293b", fontWeight: 700, fontSize: "1.05rem", margin: 0 }}>Đã kết nối thành công</p>
+              <p style={{ color: "#1e293b", fontWeight: 700, fontSize: "1.05rem", margin: 0 }}>{text.pairedTitle}</p>
               <p style={{ color: "#94a3b8", fontSize: "0.85rem", textAlign: "center", lineHeight: 1.6 }}>
-                Mã phiên: <strong style={{ color: "#0068ff" }}>{sessionId}</strong>
-                <br />Đang chờ người hướng dẫn gửi kịch bản...
+                  {text.sessionCode}: <strong style={{ color: "var(--primary)" }}>{sessionId}</strong>
+                <br />{text.waitingScenario}
               </p>
               <div className="dot-pulse"><span /><span /><span /></div>
             </div>
@@ -558,7 +560,7 @@ export default function LearnerPage() {
                   fontSize: "0.7rem", borderRadius: 999, padding: "3px 10px",
                   fontWeight: 500,
                 }}>
-                  Hôm nay
+                  {text.today}
                 </span>
               </div>
 
@@ -567,12 +569,11 @@ export default function LearnerPage() {
                 {/* Avatar */}
                 <div style={{
                   width: 32, height: 32, borderRadius: "50%",
-                  background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+                  background: "#fdf4f4",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   flexShrink: 0, fontSize: "0.8rem",
                 }}>
-                  {scam.sender.includes("AN") || scam.sender.includes("CÔNG") ? "👮" :
-                   scam.sender.includes("NGÂN HÀNG") || scam.sender.includes("BANK") ? "🏦" : "👤"}
+                  <Shield size={16} aria-hidden="true" />
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -584,10 +585,10 @@ export default function LearnerPage() {
                   <div
                     className="animate-notification"
                     style={{
-                      background: "white", borderRadius: "0 14px 14px 14px",
+                       background: "white", borderRadius: "18px 18px 18px 4px",
                       padding: "10px 14px",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
-                      fontSize: "0.95rem", lineHeight: 1.6, color: "#1e293b",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                       fontSize: "1.05rem", lineHeight: 1.5, color: "#111827",
                     }}
                   >
                     {renderMessageContent(scam.content)}
@@ -599,18 +600,18 @@ export default function LearnerPage() {
                         style={{
                           marginTop: 10, borderRadius: 10, overflow: "hidden",
                           border: "1px solid #e2e8f0", cursor: "pointer",
-                          background: "#f8fafc",
+                           background: "#f7f4ee",
                         }}
                       >
                         <div style={{
-                          height: 6, background: "linear-gradient(90deg, #0068ff 0%, #60a5fa 100%)",
+                           height: 6, background: "#e1f3fe",
                         }} />
                         <div style={{ padding: "10px 12px" }}>
-                          <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0068ff", margin: "0 0 4px" }}>
+                            <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--primary-dark)", margin: "0 0 4px" }}>
                             {extractLink(scam.content)}
                           </p>
                           <p style={{ fontSize: "0.72rem", color: "#64748b", margin: 0, lineHeight: 1.4 }}>
-                            Nhấn để truy cập trang web
+                             {text.visitWebsite}
                           </p>
                         </div>
                       </div>
@@ -626,7 +627,7 @@ export default function LearnerPage() {
               {/* Action Hint */}
               <div style={{ marginTop: 8, textAlign: "center" }}>
                 <p style={{ fontSize: "0.75rem", color: "#64748b", lineHeight: 1.5 }}>
-                  Bạn sẽ làm gì với tin nhắn này?
+                   {text.whatDo}
                 </p>
               </div>
 
@@ -646,30 +647,20 @@ export default function LearnerPage() {
                   onMouseLeave={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
                 >
                   <Trash2 size={18} />
-                  Xóa tin nhắn
+                   {text.delete}
                 </button>
               </div>
 
               <p style={{ fontSize: "0.7rem", color: "#94a3b8", textAlign: "center", lineHeight: 1.5 }}>
-                Hoặc bấm vào đường link bên trên để xem điều gì xảy ra
+                 {text.linkHint}
               </p>
             </div>
           )}
         </div>
 
-        {/* Zalo Footer Input Bar */}
-        <div style={{
-          background: "white",
-          borderTop: "1px solid #f1f5f9",
-          padding: "8px 12px",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          flexShrink: 0,
-        }}>
-          {/* Zalo Mascot / Sticker icon */}
-          <button style={{ padding: 6, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
-            <Smile size={24} color="#0068ff" />
+        <div className={styles.footerBar}>
+          <button aria-label={locale === "en" ? "Stickers" : "Nhãn dán"} style={{ padding: 6, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
+             <Smile size={28} color="var(--primary-dark)" />
           </button>
 
           {/* Input */}
@@ -679,17 +670,17 @@ export default function LearnerPage() {
             fontSize: "0.9rem", color: "#94a3b8",
             userSelect: "none",
           }}>
-            Tin nhắn
+             {text.message}
           </div>
 
-          <button style={{ padding: 6, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
-            <Mic size={22} color="#0068ff" />
+          <button aria-label={locale === "en" ? "Record voice" : "Ghi âm"} style={{ padding: 6, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
+             <Mic size={27} color="var(--primary-dark)" />
           </button>
-          <button style={{ padding: 6, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
-            <ImageIcon size={22} color="#0068ff" />
+          <button aria-label={locale === "en" ? "Send image" : "Gửi hình ảnh"} style={{ padding: 6, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
+             <ImageIcon size={27} color="var(--primary-dark)" />
           </button>
-          <button style={{ padding: 6, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
-            <MoreHorizontal size={22} color="#0068ff" />
+          <button aria-label={locale === "en" ? "More message options" : "Tùy chọn tin nhắn khác"} style={{ padding: 6, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
+             <MoreHorizontal size={28} color="var(--primary-dark)" />
           </button>
         </div>
       </div>

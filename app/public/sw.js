@@ -1,6 +1,6 @@
 // Service Worker for Anti-Scam PWA Push Notifications
 
-self.addEventListener("install", (event) => {
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 

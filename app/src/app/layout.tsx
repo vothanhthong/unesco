@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
+import { LocaleProvider } from "@/i18n/LocaleProvider";
+import LanguageSwitcher from "@/i18n/LanguageSwitcher";
 
-const inter = Inter({
-  subsets: ["latin", "vietnamese"],
-  variable: "--font-inter",
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
 });
 
 export const metadata: Metadata = {
-  title: "Zalo — Huấn luyện Phòng tránh Lừa đảo",
+  title: "Second Thought | UNESCO Youth Hackathon 2026",
   description:
-    "Ứng dụng giả lập tình huống lừa đảo thực tế giúp người cao tuổi nhận diện và phòng tránh các hình thức lừa đảo qua Zalo, điện thoại và mạng xã hội.",
+    "A youth-led UNESCO practice space for media and information literacy.",
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -24,7 +26,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Zalo",
+    title: "Second Thought",
   },
 };
 
@@ -34,8 +36,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className={inter.variable}>
-      <body className={inter.className}>{children}</body>
+    <html lang="vi" className={geist.variable}>
+      <body className={geist.className} suppressHydrationWarning>
+        <LocaleProvider>
+          <LanguageSwitcher className="language-switcher--global" />
+          {children}
+        </LocaleProvider>
+      </body>
     </html>
   );
 }

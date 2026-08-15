@@ -1,25 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { saveSubscription } from "@/lib/store";
+import { subscribeSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { session_id, subscription } = body;
-
-  if (!session_id || !subscription) {
-    return NextResponse.json(
-      { error: "session_id and subscription are required" },
-      { status: 400 }
-    );
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const success = saveSubscription(session_id, subscription);
-
-  if (!success) {
-    return NextResponse.json(
-      { error: "Session not found" },
-      { status: 404 }
-    );
+  const parsed = subscribeSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "A valid session_id and push subscription are required" }, { status: 400 });
   }
 
-  return NextResponse.json({ success: true });
+  try {
+    const success = await saveSubscription(parsed.data.session_id, parsed.data.subscription);
+
+    if (!success) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[Session] Failed to save subscription", error);
+    return NextResponse.json({ error: "Unable to save the subscription" }, { status: 500 });
+  }
 }
