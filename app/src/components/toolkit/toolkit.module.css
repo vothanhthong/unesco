@@ -874,6 +874,52 @@
   text-transform: uppercase;
 }
 
+.availabilityNote {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 28px;
+  padding: 18px 20px;
+  border-left: 3px solid var(--toolkit-blue);
+  background: var(--toolkit-blue-wash);
+  color: var(--toolkit-blue-dark);
+}
+
+.availabilityNote h2 {
+  margin: 0;
+  color: var(--toolkit-ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.availabilityNote p,
+.libraryIntro,
+.recommendationIntro {
+  margin: 5px 0 0;
+  color: var(--toolkit-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.availabilityCall {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid #9bcde0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.scenarioLibrary { padding-bottom: 44px; }
+.scenarioLibrary .panelHeadingFilter { margin-top: 0; }
+.libraryIntro { max-width: 62ch; }
+.recommendationSection { padding-top: 28px; border-top: 1px solid var(--toolkit-line); }
+.recommendationIntro { max-width: 56ch; }
+
 .panelHeadingFilter {
   margin-top: 10px;
 }
@@ -901,23 +947,20 @@
 
 .scenarioGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
-  margin-top: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .libraryCard {
-  min-height: 116px;
-  padding: 15px;
+  min-height: 290px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   border: 1px solid var(--toolkit-line);
   background: var(--toolkit-surface);
   color: var(--toolkit-ink);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
   transition: background 160ms ease, border-color 160ms ease;
 }
 
@@ -926,10 +969,14 @@
   background: #f7f5ef;
 }
 
-.libraryCard:disabled { cursor: wait; opacity: 0.6; }
-.libraryCard span { color: var(--toolkit-blue-dark); font-size: 0.65rem; font-weight: 800; text-transform: uppercase; }
-.libraryCard strong { margin-top: 14px; font-family: var(--font-geist), "Helvetica Neue", Arial, sans-serif; font-size: 1.1rem; font-weight: 600; }
-.libraryCard small { margin-top: 6px; color: var(--toolkit-muted); font-size: 0.7rem; }
+.libraryCardHeader { display: flex; align-items: center; gap: 7px; color: var(--toolkit-blue-dark); }
+.libraryCardHeader span { font-size: 0.64rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.libraryCard h3 { margin: 18px 0 8px; font-family: var(--font-geist), "Helvetica Neue", Arial, sans-serif; font-size: 1.15rem; font-weight: 650; letter-spacing: -0.03em; line-height: 1.05; }
+.libraryCard p { margin: 0; color: var(--toolkit-muted); font-size: 0.77rem; line-height: 1.52; }
+.scenarioFacts { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 15px 0; color: var(--toolkit-blue-dark); font-size: 0.68rem; font-weight: 760; }
+.scenarioFacts span { display: inline-flex; align-items: center; gap: 4px; }
+.libraryCard button { width: 100%; min-height: 42px; margin-top: auto; }
+.unavailableAction { width: 100%; min-height: 42px; display: inline-flex; align-items: center; justify-content: center; margin-top: auto; border: 1px solid var(--toolkit-line); background: #f5f5f2; color: var(--toolkit-muted); font: inherit; font-size: 0.75rem; font-weight: 800; }
 
 .historyPanel {
   margin-top: 44px;
@@ -2491,4 +2538,13 @@
   grid-template-columns: 1fr;
   background: transparent;
   border: 0;
+}
+
+@media (max-width: 640px) {
+  .availabilityNote { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+  .availabilityCall { grid-column: 2; width: fit-content; }
+  .scenarioGrid { grid-template-columns: 1fr; }
+  .libraryCard { min-height: 0; }
+  .recommendationCard { align-items: stretch; flex-direction: column; }
+  .recommendationCard .primaryAction { width: 100%; }
 }

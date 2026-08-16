@@ -4,8 +4,11 @@ import { useDeferredValue, useEffect, useState, useTransition, type FormEvent } 
 import Link from "next/link";
 import {
   ArrowUpRight,
+  ChatCircleDots,
   CheckCircle as CheckCircle2,
+  Clock,
   Funnel as Filter,
+  Phone,
   Plus,
   MagnifyingGlass as Search,
   ShieldWarning as ShieldAlert,
@@ -67,6 +70,19 @@ interface OverviewResponse {
   familyMembers: FamilyMember[];
   scenarios: Scenario[];
   sessions: PracticeSession[];
+}
+
+function scenarioDetails(scenario: Scenario) {
+  const isCall = scenario.category === "call";
+  const hasLink = Boolean(scenario.link_hint);
+  return {
+    available: !isCall,
+    channel: isCall ? "Phone-call simulation" : hasLink ? "Message simulation" : "Chat simulation",
+    difficulty: isCall ? "Advanced" : scenario.category === "investment" ? "Intermediate" : "Beginner",
+    duration: isCall ? "Coming soon" : "5 min",
+    skill: isCall ? "Verify identity" : hasLink ? "Check links" : "Resist urgency",
+    description: scenario.content.length > 132 ? `${scenario.content.slice(0, 129).trimEnd()}...` : scenario.content,
+  };
 }
 
 export default function TrainDashboard() {
@@ -201,7 +217,9 @@ export default function TrainDashboard() {
     completedAt: session.result.created_at,
   }] : []);
   const recommendations = recommendScenarios(
-    localizedScenarios.map(({ slug, category, title, locale: scenarioLocale, is_verified }) => ({ slug, category, title, locale: scenarioLocale, verified: is_verified })),
+    localizedScenarios
+      .filter((scenario) => scenarioDetails(scenario).available)
+      .map(({ slug, category, title, locale: scenarioLocale, is_verified }) => ({ slug, category, title, locale: scenarioLocale, verified: is_verified })),
     outcomes,
     { locale: locale === "vi" ? "vi-VN" : "en-US" }
   );
@@ -227,11 +245,6 @@ export default function TrainDashboard() {
       content: localizedScenario.content,
       linkHint: localizedScenario.link_hint,
     }, session.result?.result ?? (session.status === "failed" ? "failed" : "passed"), locale);
-  }
-
-  function scenarioCategoryLabel(scenario: Scenario) {
-    if (scenario.community_cluster_id) return text.communityLesson;
-    return { message: text.message, call: text.call, investment: text.investment }[scenario.category] || scenario.category;
   }
 
   function addFamilyMember(event: FormEvent<HTMLFormElement>) {
@@ -312,7 +325,8 @@ export default function TrainDashboard() {
     });
   }
 
-  function startPractice(scenario: Pick<ScenarioRecommendation, "slug">) {
+  function startPractice(scenario: Pick<ScenarioRecommendation, "slug"> & Partial<Scenario>) {
+    if (scenario.category === "call") return;
     setActionError("");
     window.location.assign(`/toolkit/train/session?scenario_slug=${encodeURIComponent(scenario.slug)}`);
   }
@@ -321,15 +335,24 @@ export default function TrainDashboard() {
     <div className={styles.trainDashboard}>
       <div className={styles.trainIntro}>
         <div>
-          <p className={styles.eyebrow}>{text.introEyebrow}</p>
-          <h1>{text.introTitle}</h1>
-          <p>{text.introBody}</p>
+          <p className={styles.eyebrow}>TRAIN / Safe practice</p>
+          <h1>Choose a safe practice</h1>
+          <p>Explore realistic scam scenarios in a safe environment. Choose a situation that feels relevant, make decisions, and practise pausing, checking, and verifying before you act.</p>
         </div>
         <div className={styles.memberCount}>
           <span>{text.memberCount}</span>
           <strong>{overview.familyMembers.length.toString().padStart(2, "0")}</strong>
         </div>
       </div>
+
+      <aside className={styles.availabilityNote} aria-labelledby="availability-title">
+        <ChatCircleDots size={23} aria-hidden="true" />
+        <div>
+          <h2 id="availability-title">Currently available: message and chat simulations</h2>
+          <p>Phone-call simulations are still under development. For now, you can practise responding to scam messages and chat-based situations.</p>
+        </div>
+        <span className={styles.availabilityCall}><Phone size={16} aria-hidden="true" /> Coming soon</span>
+      </aside>
 
       <div className={styles.trainLayout}>
         <aside className={styles.familyPanel} aria-labelledby="family-panel-title">
@@ -376,33 +399,46 @@ export default function TrainDashboard() {
           </form>
         </aside>
 
-        <section className={styles.trainMain} aria-labelledby="recommendation-title">
-          <div className={styles.panelHeading}>
-             <div><p className={styles.eyebrow}>{text.recommendationEyebrow}</p><h2 id="recommendation-title">{selectedMember ? `${text.forMember} ${selectedMember.display_name}` : text.recommendationTitle}</h2></div>
-            <ShieldAlert size={20} aria-hidden="true" />
-          </div>
-          {recommendations.length > 0 ? (
-            <div className={styles.recommendationList}>
-              {recommendations.slice(0, 3).map((recommendation) => (
-                <article className={styles.recommendationCard} key={recommendation.slug}>
-                  <div><span className={styles.recommendationRank}>{text.recommended}</span><h3>{recommendation.title}</h3><p>{recommendation.reason}</p></div>
-                  <Button type="button" disabled={isPending} onClick={() => startPractice(recommendation)}>{text.start} <ArrowUpRight data-icon="inline-end" aria-hidden="true" /></Button>
-                </article>
-              ))}
+        <section className={styles.trainMain} aria-label="Scenario selection">
+          <section className={styles.scenarioLibrary} aria-labelledby="scenario-library-title">
+            <div className={styles.panelHeadingFilter}>
+              <div>
+                <p className={styles.eyebrow}>01 / Choose a situation</p>
+                <h2 id="scenario-library-title">Scenario Library</h2>
+                <p className={styles.libraryIntro}>Choose a situation to practise. Every scenario is fictional and safe - no real money, messages, or personal information are involved.</p>
+              </div>
+              <Filter size={18} aria-hidden="true" />
             </div>
-          ) : <p className={styles.emptyCopy}>{text.allRecent}</p>}
+            <div className={styles.filters}>
+              <label className={styles.searchField} htmlFor="scenario-search"><Search size={15} aria-hidden="true" /><span className={styles.srOnly}>{text.searchLabel}</span><Input id="scenario-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={text.search} /></label>
+              <label className={styles.selectField} htmlFor="scenario-category"><span className={styles.srOnly}>{text.categoryLabel}</span><select id="scenario-category" value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">{text.allCategories}</option><option value="message">{text.message}</option><option value="call">{text.call}</option><option value="investment">{text.investment}</option></select></label>
+            </div>
+            <div className={styles.scenarioGrid}>
+              {visibleScenarios.map((scenario) => {
+                const details = scenarioDetails(scenario);
+                return (
+                  <article key={scenario.id} className={styles.libraryCard}>
+                    <div className={styles.libraryCardHeader}>
+                      {details.available ? <ChatCircleDots size={19} aria-hidden="true" /> : <Phone size={19} aria-hidden="true" />}
+                      <span>{details.available ? details.channel : "Phone-call simulation - under development"}</span>
+                    </div>
+                    <h3>{scenario.title}</h3>
+                    <p>{details.description}</p>
+                    <div className={styles.scenarioFacts}><span>{details.difficulty}</span><span><Clock size={13} aria-hidden="true" /> {details.duration}</span><span>{details.skill}</span></div>
+                    {details.available ? <Button type="button" disabled={isPending} onClick={() => startPractice(scenario)}>Start simulation <ArrowUpRight data-icon="inline-end" aria-hidden="true" /></Button> : <button className={styles.unavailableAction} type="button" disabled aria-disabled="true">Coming soon</button>}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
 
-          <div className={styles.panelHeadingFilter}>
-            <div><p className={styles.eyebrow}>{text.libraryEyebrow}</p><h2>{text.libraryTitle}</h2></div>
-            <Filter size={18} aria-hidden="true" />
-          </div>
-          <div className={styles.filters}>
-            <label className={styles.searchField} htmlFor="scenario-search"><Search size={15} aria-hidden="true" /><span className={styles.srOnly}>{text.searchLabel}</span><Input id="scenario-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={text.search} /></label>
-            <label className={styles.selectField} htmlFor="scenario-category"><span className={styles.srOnly}>{text.categoryLabel}</span><select id="scenario-category" value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">{text.allCategories}</option><option value="message">{text.message}</option><option value="call">{text.call}</option><option value="investment">{text.investment}</option></select></label>
-          </div>
-          <div className={styles.scenarioGrid}>
-             {visibleScenarios.map((scenario) => <button key={scenario.id} className={styles.libraryCard} type="button" onClick={() => startPractice(scenario)} disabled={isPending}><span>{scenarioCategoryLabel(scenario)}</span><strong>{scenario.title}</strong><small>{scenario.sender}</small></button>)}
-          </div>
+          <section className={styles.recommendationSection} aria-labelledby="recommendation-title">
+            <div className={styles.panelHeading}>
+              <div><p className={styles.eyebrow}>02 / A gentle suggestion</p><h2 id="recommendation-title">Recommended next practice</h2><p className={styles.recommendationIntro}>Not sure where to begin? Based on the skills you have practised, this is a good next scenario to try.</p></div>
+              <ShieldAlert size={20} aria-hidden="true" />
+            </div>
+            {recommendations.length > 0 ? <div className={styles.recommendationList}>{recommendations.slice(0, 1).map((recommendation) => <article className={styles.recommendationCard} key={recommendation.slug}><div><span className={styles.recommendationRank}>{text.recommended}</span><h3>{recommendation.title}</h3><p>{recommendation.reason}</p></div><Button type="button" disabled={isPending} onClick={() => startPractice(recommendation)}>Try this recommendation <ArrowUpRight data-icon="inline-end" aria-hidden="true" /></Button></article>)}</div> : <p className={styles.emptyCopy}>{text.allRecent}</p>}
+          </section>
         </section>
       </div>
 
