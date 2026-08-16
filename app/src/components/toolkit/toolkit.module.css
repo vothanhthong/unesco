@@ -1929,6 +1929,55 @@
   padding-bottom: 32px;
 }
 
+.checkmateCta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(28px, 6vw, 92px);
+  margin-top: clamp(48px, 8vw, 100px);
+  padding: clamp(26px, 4vw, 44px) 0;
+  border-top: 3px solid var(--toolkit-blue);
+  border-bottom: 1px solid var(--toolkit-line);
+}
+
+.checkmateCta h2 {
+  max-width: 20ch;
+  margin: 0;
+  font-family: var(--font-geist), "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(2rem, 4vw, 3.8rem);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 0.98;
+}
+
+.checkmateCta p {
+  max-width: 62ch;
+  margin: 16px 0 0;
+  color: var(--toolkit-muted);
+  line-height: 1.65;
+}
+
+.checkmateAction {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 18px;
+  border-radius: 6px;
+  background: var(--toolkit-blue);
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.checkmateAction span { transition: transform 160ms ease; }
+.checkmateAction:hover { background: var(--toolkit-blue-dark); transform: translateY(-2px); }
+.checkmateAction:hover span { transform: translateX(4px); }
+.checkmateAction:focus-visible { outline: 3px solid var(--toolkit-orange); outline-offset: 4px; }
+
 .contributePageHeader {
   max-width: none;
   display: grid;
@@ -2374,6 +2423,9 @@
 }
 
 @media (max-width: 640px) {
+  .checkmateCta { grid-template-columns: 1fr; gap: 24px; }
+  .checkmateAction { width: 100%; }
+
   .communityToolbar {
     align-items: flex-start;
     flex-direction: column;

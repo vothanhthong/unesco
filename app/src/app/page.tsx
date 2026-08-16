@@ -2,23 +2,40 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
+import type { CSSProperties } from "react";
 import styles from "./homepage.module.css";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-const photos = [
-  { className: "unesco", label: "UNESCO identity mark", delay: 0.05, position: "7% 6%", size: "900%" },
-  { className: "learningOne", label: "Older adults learning together", delay: 0.18, position: "28% 9%", size: "770%" },
-  { className: "phone", label: "Older adult using a phone", delay: 0.26, position: "15% 19%", size: "670%" },
-  { className: "helper", label: "Young facilitator supporting an older adult", delay: 0.34, position: "65% 9%", size: "710%" },
-  { className: "group", label: "Community group learning together", delay: 0.42, position: "82% 17%", size: "590%" },
-  { className: "portraitLeft", label: "Older community member", delay: 0.9, position: "18% 53%", size: "1000%" },
-  { className: "portraitLower", label: "Older adult at home", delay: 0.98, position: "10% 78%", size: "900%" },
-  { className: "portraitRight", label: "Older community member seated outdoors", delay: 1.06, position: "80% 52%", size: "1400%" },
-  { className: "portraitFarRight", label: "Older community member", delay: 1.14, position: "89% 67%", size: "900%" },
-  { className: "phoneLearning", label: "Older adults practising with a phone", delay: 1.22, position: "36% 82%", size: "590%" },
-  { className: "learningTwo", label: "Facilitator assisting older adults", delay: 1.3, position: "64% 80%", size: "670%" },
-  { className: "learningThree", label: "Community workshop", delay: 1.38, position: "85% 79%", size: "625%" },
+type CollagePhoto = {
+  id: string;
+  alt: string;
+  desktop: {
+    top?: string;
+    right?: string;
+    bottom?: string;
+    left?: string;
+    width: string;
+    height: string;
+    zIndex: number;
+  };
+  mobileOrder: number;
+  mobileShape: "portrait" | "landscape";
+  delay: number;
+  crop: { backgroundPosition: string; backgroundSize: string };
+  enterFrom: { x: number; y: number; rotate: number };
+};
+
+const photos: CollagePhoto[] = [
+  { id: "unesco", alt: "UNESCO identity mark", desktop: { top: "7%", left: "7%", width: "144px", height: "42px", zIndex: 1 }, mobileOrder: 1, mobileShape: "landscape", delay: 0.05, crop: { backgroundPosition: "7% 6%", backgroundSize: "900%" }, enterFrom: { x: -18, y: -12, rotate: -1 } },
+  { id: "learning-group", alt: "Older adults learning together in a workshop", desktop: { top: "8%", left: "18%", width: "240px", height: "145px", zIndex: 1 }, mobileOrder: 2, mobileShape: "landscape", delay: 0.18, crop: { backgroundPosition: "28% 9%", backgroundSize: "640%" }, enterFrom: { x: -28, y: -22, rotate: -2 } },
+  { id: "phone-practice", alt: "Older adult practising safely on a phone", desktop: { top: "24%", left: "8%", width: "260px", height: "166px", zIndex: 1 }, mobileOrder: 3, mobileShape: "landscape", delay: 0.26, crop: { backgroundPosition: "15% 19%", backgroundSize: "650%" }, enterFrom: { x: -30, y: 18, rotate: 2 } },
+  { id: "intergenerational-help", alt: "Young facilitator supporting an older adult", desktop: { top: "8%", right: "19%", width: "218px", height: "156px", zIndex: 1 }, mobileOrder: 4, mobileShape: "landscape", delay: 0.34, crop: { backgroundPosition: "65% 9%", backgroundSize: "690%" }, enterFrom: { x: 28, y: -22, rotate: 2 } },
+  { id: "community-session", alt: "Community group learning together", desktop: { top: "18%", right: "7%", width: "258px", height: "156px", zIndex: 1 }, mobileOrder: 5, mobileShape: "landscape", delay: 0.42, crop: { backgroundPosition: "82% 17%", backgroundSize: "590%" }, enterFrom: { x: 30, y: 14, rotate: -2 } },
+  { id: "elder-portrait", alt: "Older community member taking part in the programme", desktop: { bottom: "10%", left: "8%", width: "170px", height: "290px", zIndex: 1 }, mobileOrder: 6, mobileShape: "portrait", delay: 0.9, crop: { backgroundPosition: "18% 53%", backgroundSize: "930%" }, enterFrom: { x: -24, y: 26, rotate: -2 } },
+  { id: "home-portrait", alt: "Older adult at home", desktop: { bottom: "7%", left: "22%", width: "138px", height: "190px", zIndex: 2 }, mobileOrder: 7, mobileShape: "portrait", delay: 0.98, crop: { backgroundPosition: "10% 78%", backgroundSize: "820%" }, enterFrom: { x: -14, y: 30, rotate: 2 } },
+  { id: "outdoor-portrait", alt: "Older community member seated outdoors", desktop: { bottom: "10%", right: "8%", width: "170px", height: "270px", zIndex: 2 }, mobileOrder: 8, mobileShape: "portrait", delay: 1.06, crop: { backgroundPosition: "80% 52%", backgroundSize: "1150%" }, enterFrom: { x: 26, y: 28, rotate: 2 } },
+  { id: "assisted-learning", alt: "Facilitator helping older adults use a phone", desktop: { bottom: "7%", right: "22%", width: "250px", height: "144px", zIndex: 1 }, mobileOrder: 9, mobileShape: "landscape", delay: 1.18, crop: { backgroundPosition: "64% 80%", backgroundSize: "640%" }, enterFrom: { x: 24, y: 24, rotate: -2 } },
 ];
 
 function entrance(delay: number, reducedMotion: boolean | null, y = 42) {
@@ -36,14 +53,14 @@ export default function HomePage() {
     <main className={styles.page}>
       <header className={styles.hero} aria-labelledby="homepage-title">
         <div className={styles.collage} aria-label="Documentary photos from intergenerational digital-learning sessions">
-          {photos.map((photo, index) => (
+          {photos.map((photo) => (
             <motion.div
-              key={photo.className}
-              className={`${styles.photo} ${styles[photo.className]}`}
+              key={photo.id}
+              className={`${styles.photo} ${photo.mobileShape === "portrait" ? styles.photoPortrait : styles.photoLandscape}`}
               role="img"
-              aria-label={photo.label}
-              style={{ backgroundPosition: photo.position, backgroundSize: photo.size }}
-              initial={reducedMotion ? false : { opacity: 0, x: index % 2 === 0 ? -28 : 28, y: index % 3 === 0 ? -24 : 28, rotate: index % 2 === 0 ? -2 : 2 }}
+              aria-label={photo.alt}
+              style={{ ...photo.desktop, order: photo.mobileOrder, backgroundPosition: photo.crop.backgroundPosition, backgroundSize: photo.crop.backgroundSize } as CSSProperties}
+              initial={reducedMotion ? false : { opacity: 0, ...photo.enterFrom }}
               animate={reducedMotion ? undefined : { opacity: 1, x: 0, y: 0, rotate: 0 }}
               transition={reducedMotion ? { duration: 0 } : { duration: 0.72, delay: photo.delay, ease }}
             />
