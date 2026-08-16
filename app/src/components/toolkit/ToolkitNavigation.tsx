@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, BookOpen, List as Menu, Megaphone, X } from "@phosphor-icons/react";
+import { ArrowUpRight, BookOpen, List as Menu, Megaphone, Trophy, X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ export default function ToolkitNavigation() {
   const links = [
     { href: "/toolkit/train", label: copy.toolkit.trainNote, icon: BookOpen },
     { href: "/toolkit/contribute", label: copy.toolkit.contributeNote, icon: Megaphone },
+    { href: "/leaderboard", label: "Top Contributors", icon: Trophy },
   ];
 
   useEffect(() => {
