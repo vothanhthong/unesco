@@ -41,6 +41,8 @@ interface Scenario {
   locale?: string | null;
   is_verified?: boolean;
   community_cluster_id?: string | null;
+  title_en?: string | null;
+  content_en?: string | null;
 }
 
 interface PracticeSession {

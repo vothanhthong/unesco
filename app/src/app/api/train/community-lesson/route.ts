@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedContext } from "@/lib/auth/server";
 import { communityLessonCreateSchema } from "@/lib/validation";
 
-const scenarioSelect = "id,slug,category,title,sender,content,link_hint,locale,is_verified,is_published,community_cluster_id";
+const scenarioSelect = "id,slug,category,title,sender,content,link_hint,locale,is_verified,is_published,community_cluster_id,title_en,content_en";
 
 export async function POST(request: Request) {
   const auth = await getAuthenticatedContext();
@@ -54,6 +54,8 @@ export async function POST(request: Request) {
       title: isEnglish && cluster.title_en ? cluster.title_en : cluster.title,
       sender: isEnglish ? "COMMUNITY REPORT" : "BÁO CÁO CỘNG ĐỒNG",
       content: isEnglish && cluster.summary_en ? cluster.summary_en : cluster.summary,
+      title_en: cluster.title_en,
+      content_en: cluster.summary_en,
       locale: isEnglish ? "en-US" : "vi-VN",
       is_verified: true,
       is_published: false,

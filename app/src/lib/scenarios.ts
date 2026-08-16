@@ -9,6 +9,9 @@ export interface ScenarioDefinition {
   sender: string;
   content: string;
   linkHint?: string;
+  community_cluster_id?: string | null;
+  title_en?: string | null;
+  content_en?: string | null;
 }
 
 export const SCENARIO_DEFINITIONS: ScenarioDefinition[] = [
@@ -164,8 +167,19 @@ const ENGLISH_SCENARIOS: Record<string, Pick<ScenarioDefinition, "title" | "send
   },
 };
 
-export function localizeScenario<T extends Pick<ScenarioDefinition, "slug" | "title" | "sender" | "content">>(scenario: T, locale: "vi" | "en"): T {
+type LocalizableScenario = Pick<ScenarioDefinition, "slug" | "title" | "sender" | "content">
+  & Partial<Pick<ScenarioDefinition, "community_cluster_id" | "title_en" | "content_en">>;
+
+export function localizeScenario<T extends LocalizableScenario>(scenario: T, locale: "vi" | "en"): T {
   if (locale === "vi") return scenario;
+  if (scenario.community_cluster_id && scenario.title_en && scenario.content_en) {
+    return {
+      ...scenario,
+      title: scenario.title_en,
+      sender: "COMMUNITY REPORT",
+      content: scenario.content_en,
+    };
+  }
   const translation = ENGLISH_SCENARIOS[scenario.slug];
   return translation ? { ...scenario, ...translation } : scenario;
 }

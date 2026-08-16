@@ -13,7 +13,7 @@ export async function GET() {
       .order("created_at", { ascending: true }),
       auth.supabase
         .from("scenarios")
-        .select("id,slug,category,title,sender,content,link_hint,locale,is_verified,community_cluster_id")
+        .select("id,slug,category,title,sender,content,link_hint,locale,is_verified,community_cluster_id,title_en,content_en")
         .or(`is_published.eq.true,created_by.eq.${auth.user.id}`)
       .order("category", { ascending: true })
       .order("title", { ascending: true }),
