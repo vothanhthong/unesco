@@ -29,6 +29,26 @@
   border-bottom: 0;
 }
 
+.learnerLanguageSwitcher {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(0, 56, 108, 0.24);
+  color: #ffffff;
+}
+
+.learnerLanguageSwitcher svg {
+  color: #ffffff;
+}
+
+.learnerLanguageSwitcher button {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.learnerLanguageSwitcher button:hover,
+.learnerLanguageSwitcher button.active {
+  background: #ffffff;
+  color: #0673c2;
+}
+
 .chatBody {
   flex: 1;
   display: flex;
@@ -306,6 +326,25 @@
   .phone {
     min-height: 100dvh;
     box-shadow: none;
+  }
+
+  .learnerLanguageSwitcher {
+    gap: 0;
+    padding: 2px;
+  }
+
+  .learnerLanguageSwitcher svg {
+    display: none;
+  }
+
+  .learnerLanguageSwitcher button {
+    min-width: 25px;
+    min-height: 24px;
+    font-size: 0.62rem;
+  }
+
+  .chatHeader > button {
+    padding: 4px !important;
   }
 
   .resultOverlay,

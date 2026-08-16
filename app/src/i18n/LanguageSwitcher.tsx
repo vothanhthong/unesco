@@ -4,12 +4,17 @@ import { Translate } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/i18n/LocaleProvider";
 
-export default function LanguageSwitcher({ embedded = false, className = "" }: { embedded?: boolean; className?: string }) {
+export default function LanguageSwitcher({
+  embedded = false,
+  showOnLearner = false,
+  className = "",
+}: { embedded?: boolean; showOnLearner?: boolean; className?: string }) {
   const pathname = usePathname();
   const { locale, setLocale, copy } = useLocale();
 
-  if (pathname === "/" || pathname === "/learner") return null;
-  if (embedded && !pathname.startsWith("/toolkit")) return null;
+  const isLearnerRoute = pathname === "/" || pathname === "/learner";
+  if (isLearnerRoute && !showOnLearner) return null;
+  if (embedded && !pathname.startsWith("/toolkit") && !showOnLearner) return null;
 
   return (
     <div className={`language-switcher${embedded ? " language-switcher--embedded" : ""}${className ? ` ${className}` : ""}`} aria-label={copy.language.label}>

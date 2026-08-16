@@ -18,6 +18,7 @@ import {
   Shield,
 } from "@phosphor-icons/react";
 import { useLocale } from "@/i18n/LocaleProvider";
+import LanguageSwitcher from "@/i18n/LanguageSwitcher";
 import styles from "./learner.module.css";
 
 type SessionStatus = "waiting" | "paired" | "triggered" | "passed" | "failed" | "closed";
@@ -405,6 +406,8 @@ export default function LearnerPage() {
               </div>
             )}
           </div>
+
+          <LanguageSwitcher embedded showOnLearner className={styles.learnerLanguageSwitcher} />
 
           <button aria-label={locale === "en" ? "Call" : "Gọi điện"} style={{ padding: 8, background: "none", border: "none", cursor: "pointer" }}>
             <Phone size={27} color="white" />
