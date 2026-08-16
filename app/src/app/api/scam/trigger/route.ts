@@ -1,54 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { triggerScam, getSession } from "@/lib/store";
+import { scamTriggerSchema } from "@/lib/validation";
 
-// Configure VAPID details once
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+const vapidConfig = [
+  process.env.VAPID_EMAIL,
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY,
+];
+
+if (vapidConfig.every(Boolean)) {
+  webpush.setVapidDetails(vapidConfig[0]!, vapidConfig[1]!, vapidConfig[2]!);
+}
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { session_id, type, sender, content } = body;
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
-  if (!session_id || !type || !sender || !content) {
+  const parsed = scamTriggerSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json(
       { error: "session_id, type, sender, and content are required" },
       { status: 400 }
     );
   }
 
-  const success = triggerScam(session_id, { type, sender, content });
+  try {
+    const { session_id, type, sender, content } = parsed.data;
+    const success = await triggerScam(session_id, { type, sender, content });
 
-  if (!success) {
-    return NextResponse.json(
-      { error: "Session not found or not paired" },
-      { status: 404 }
-    );
-  }
-
-  // Send Web Push notification if the learner has subscribed
-  const session = getSession(session_id);
-  if (session?.pushSubscription) {
-    try {
-      await webpush.sendNotification(
-        session.pushSubscription as webpush.PushSubscription,
-        JSON.stringify({
-          sender,
-          content,
-          sessionId: session_id,
-        })
-      );
-      console.log(`[Push] Notification sent to session ${session_id}`);
-    } catch (err) {
-      // Push failed (e.g. subscription expired) — but don't fail the whole request
-      console.error("[Push] Failed to send notification:", err);
+    if (!success) {
+      return NextResponse.json({ error: "Session not found or not paired" }, { status: 404 });
     }
-  } else {
-    console.log(`[Push] No push subscription for session ${session_id}, skipping`);
-  }
 
-  return NextResponse.json({ success: true, pushed: !!session?.pushSubscription });
+    // Push is optional for local development and must not block the simulation.
+    const session = await getSession(session_id);
+    if (session?.pushSubscription && vapidConfig.every(Boolean)) {
+      try {
+        await webpush.sendNotification(
+          session.pushSubscription as webpush.PushSubscription,
+          JSON.stringify({ sender, content, sessionId: session_id })
+        );
+      } catch (error) {
+        console.error("[Push] Failed to send notification", error);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      pushed: Boolean(session?.pushSubscription && vapidConfig.every(Boolean)),
+    });
+  } catch (error) {
+    console.error("[Session] Failed to trigger scam", error);
+    return NextResponse.json({ error: "Unable to trigger the scam simulation" }, { status: 500 });
+  }
 }

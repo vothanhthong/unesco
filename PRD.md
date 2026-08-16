@@ -1,5 +1,7 @@
 # PRD - Đề Án Ứng Dụng Giả Lập Cảnh Báo Lừa Đảo (Anti-Scam Trainer - Zalo Version)
 
+> Delivery status and next-phase implementation are tracked in [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md).
+
 ## 1. Mục Tiêu Sản Phẩm (Product Objectives)
 Xây dựng ứng dụng web giả lập tình huống lừa đảo trực quan dành cho **người cao tuổi Việt Nam** dựa trên thói quen sử dụng ứng dụng **Zalo**:
 - **Logo chính thức**: Sử dụng logo Zalo xanh chuẩn ([/zalo-logo.svg](file:///Users/vothanhthong/Documents/unesco/app/public/zalo-logo.svg)) làm biểu tượng chính cho ứng dụng, header, và biểu tượng cài đặt app trên màn hình điện thoại.
