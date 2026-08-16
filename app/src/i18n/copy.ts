@@ -39,6 +39,23 @@ export const COPY = {
       reviewFirst: "Ưu tiên đánh giá",
       trustTitle: "Niềm tin đến từ sự minh bạch.",
       trustBody: "Mọi tình huống đều do con người soạn thảo và đánh giá trước khi đến với gia đình.",
+      howToStart: {
+        eyebrow: "CÁCH BẮT ĐẦU",
+        heading: "Cùng thực hành, từng quyết định an toàn một.",
+        learner: {
+          label: "NGƯỜI HỌC",
+          description: "Trải nghiệm tình huống lừa đảo.",
+          steps: ["Mở mục Bắt đầu với vai trò Người học", "Chia sẻ mã gồm 4 chữ số của bạn", "Phản hồi theo cách bạn thường làm", "Học hỏi và thử lại"],
+        },
+        trainer: {
+          label: "NGƯỜI HƯỚNG DẪN",
+          description: "Hỗ trợ điều phối trải nghiệm.",
+          steps: ["Mở mục Bắt đầu với vai trò Người hướng dẫn", "Nhập mã của Người học", "Chọn một tình huống", "Kích hoạt, trao đổi và cùng nhìn lại"],
+        },
+        closing: "Người hướng dẫn tạo ra tình huống. Người học là người đưa ra quyết định.",
+        learnerLink: "Đến trang Người học →",
+        trainerLink: "Đến trang Người hướng dẫn →",
+      },
     },
     login: {
       eyebrow: "Công cụ / Truy cập người hướng dẫn",
@@ -340,6 +357,23 @@ export const COPY = {
       reviewFirst: "Review-first",
       trustTitle: "Trust grows through transparency.",
       trustBody: "People write and review every scenario before it reaches a family practice session.",
+      howToStart: {
+        eyebrow: "HOW TO START",
+        heading: "Practise together, one safe decision at a time.",
+        learner: {
+          label: "LEARNER",
+          description: "Experience the scam.",
+          steps: ["Open Start as a Learner", "Share your 4-digit code", "Respond naturally", "Learn & retry"],
+        },
+        trainer: {
+          label: "TRAINER",
+          description: "Facilitate the experience.",
+          steps: ["Open Start as a Trainer", "Enter the learner's code", "Select a scenario", "Trigger, ask & debrief"],
+        },
+        closing: "The Trainer creates the situation. The Learner makes the decision.",
+        learnerLink: "Go to Learner →",
+        trainerLink: "Go to Trainer →",
+      },
     },
     login: {
       eyebrow: "Toolkit / Facilitator access",

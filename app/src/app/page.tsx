@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { Handshake, User as UserIcon } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useLocale } from "@/i18n/LocaleProvider";
 import styles from "./homepage.module.css";
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -43,6 +45,7 @@ function entrance(delay: number, reducedMotion: boolean | null, y = 42) {
 
 export default function HomePage() {
   const reducedMotion = useReducedMotion();
+  const { copy } = useLocale();
   const [collageMode, setCollageMode] = useState<"none" | "laptop" | "desktop">("none");
   const photoMotion = (photo: CollageImage) => ({
     initial: reducedMotion ? false : { opacity: 0, x: photo.animation.x, y: photo.animation.y, rotate: photo.animation.rotate },
@@ -100,6 +103,28 @@ export default function HomePage() {
           </motion.div>
         </div>
       </header>
+      <section className={styles.howToStart} aria-labelledby="how-to-start-heading">
+        <div className={styles.howToStartIntro}>
+          <p>{copy.home.howToStart.eyebrow}</p>
+          <h2 id="how-to-start-heading">{copy.home.howToStart.heading}</h2>
+        </div>
+        <div className={styles.instructionGrid}>
+          {[
+            { key: "learner", icon: UserIcon, href: "/learner", content: copy.home.howToStart.learner, link: copy.home.howToStart.learnerLink },
+            { key: "trainer", icon: Handshake, href: "/toolkit/train", content: copy.home.howToStart.trainer, link: copy.home.howToStart.trainerLink },
+          ].map(({ key, icon: Icon, href, content, link }) => (
+            <article key={key} className={styles.instructionPanel}>
+              <div className={styles.instructionHeader}>
+                <Icon size={26} aria-hidden="true" />
+                <div><p>{content.label}</p><h3>{content.description}</h3></div>
+              </div>
+              <ol>{content.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+              <Link className={styles.instructionLink} href={href}>{link}</Link>
+            </article>
+          ))}
+        </div>
+        <p className={styles.howToStartClosing}>{copy.home.howToStart.closing}</p>
+      </section>
     </main>
   );
 }
