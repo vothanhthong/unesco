@@ -38,7 +38,7 @@ export default function ToolkitNavigation() {
   return (
     <header className={styles.topbar}>
       <div className={styles.topbarInner}>
-        <Link className={styles.brand} href="/toolkit" onClick={() => setMobileOpen(false)}>
+        <Link className={styles.brand} href="/" onClick={() => setMobileOpen(false)}>
           <span className={styles.brandRule} aria-hidden="true" />
           <span>
             <span className={styles.brandMeta}>{copy.toolkit.brandMeta}</span>
