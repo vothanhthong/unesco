@@ -35,21 +35,35 @@ export default function CommunityTrends() {
   const [votingId, setVotingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
+  async function loadCommunity() {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/contribute/community?sort=${sort}&locale=${locale}`, { cache: "no-store" });
+      const data = (await response.json().catch(() => null)) as { clusters?: CommunityCluster[]; error?: string } | null;
+      if (!response.ok) throw new Error(data?.error || text.error);
+      setClusters(data?.clusters ?? []);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : text.error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
-    async function loadCommunity() {
+    void (async () => {
+      setLoading(true);
+      setError("");
       try {
         const response = await fetch(`/api/contribute/community?sort=${sort}&locale=${locale}`, { cache: "no-store" });
-        if (!response.ok) throw new Error(text.error);
-        const data = (await response.json()) as { clusters: CommunityCluster[] };
-        if (!cancelled) setClusters(data.clusters);
-      } catch {
-        if (!cancelled) setError(text.error);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void loadCommunity();
+        const data = (await response.json().catch(() => null)) as { clusters?: CommunityCluster[]; error?: string } | null;
+        if (!response.ok) throw new Error(data?.error || text.error);
+        if (!cancelled) setClusters(data?.clusters ?? []);
+      } catch (loadError) {
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : text.error);
+      } finally { if (!cancelled) setLoading(false); }
+    })();
     return () => { cancelled = true; };
   }, [locale, sort, text.error]);
 
@@ -63,7 +77,7 @@ export default function CommunityTrends() {
     try {
       const response = await fetch(`/api/contribute/community/${clusterId}/vote`, { method: "POST" });
       if (!response.ok) {
-        if (response.status === 401) throw new Error(text.signInToVote);
+        if (response.status === 401) { window.location.assign("/toolkit/login?next=/toolkit/contribute"); throw new Error(text.signInToVote); }
         const data = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(data?.error || text.error);
       }
@@ -82,6 +96,7 @@ export default function CommunityTrends() {
       setSavingId(clusterId);
       const response = await fetch(`/api/contribute/community/${clusterId}/lesson`, { method: "DELETE" });
       if (response.ok) setClusters((current) => current.map((cluster) => cluster.id === clusterId ? { ...cluster, has_added_to_lesson: false, lesson_addition_count: Math.max(0, cluster.lesson_addition_count - 1) } : cluster));
+      else if (response.status === 401) window.location.assign("/toolkit/login?next=/toolkit/contribute");
       else setError(text.error);
       setSavingId(null);
       return;
@@ -95,7 +110,7 @@ export default function CommunityTrends() {
         body: JSON.stringify({ cluster_id: clusterId, locale }),
       });
       if (!response.ok) {
-        if (response.status === 401) throw new Error(text.signInToAdd);
+        if (response.status === 401) { window.location.assign("/toolkit/login?next=/toolkit/contribute"); throw new Error(text.signInToAdd); }
         const data = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(data?.error || text.error);
       }
@@ -138,12 +153,12 @@ export default function CommunityTrends() {
       </div>
 
       {loading && (
-        <div className={styles.communityList} aria-label={text.loading}>
+        <div className={styles.communityList} aria-label="Loading community patterns...">
           {Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className={styles.communitySkeleton} />)}
         </div>
       )}
-      {!loading && error && <p className={styles.actionError} role="alert">{error}</p>}
-      {!loading && !error && clusters.length === 0 && <p className={styles.communityEmpty}>{text.noTrends}</p>}
+      {!loading && error && <div className={styles.communityEmpty} role="alert"><p>We could not load community patterns right now.</p><button className={styles.subtleAction} type="button" onClick={() => void loadCommunity()}>Try again</button><small>{error}</small></div>}
+      {!loading && !error && clusters.length === 0 && <div className={styles.communityEmpty}><p>No verified scam patterns have been shared yet.</p><p>Be the first to help the community practise safer responses.</p><Link className={styles.textLink} href="/toolkit/contribute/report">Report a pattern <span aria-hidden="true">→</span></Link></div>}
       {!loading && !error && clusters.length > 0 && (
         <div className={styles.communityList}>
           {clusters.map((cluster) => (

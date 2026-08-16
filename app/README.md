@@ -18,13 +18,15 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Supabase Persistence
 
-The app runs locally with an in-memory compatibility store when Supabase variables are absent. Configure the production persistence path with the values in `.env.example`:
+The contribution, impact, and leaderboard routes require Supabase. Without local environment variables, those routes return `503 Supabase is not configured`; there is no in-memory replacement for community data. Configure the existing Supabase project locally with the placeholder names in `.env.example`:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Apply all files in `supabase/migrations/` in order, then run `supabase/seed.sql` against the project. The seed includes clearly synthetic community-trend demo clusters for local/demo environments; it is not real user-submitted data. The server-only `SUPABASE_SECRET_KEY` is required by the current session compatibility adapter and must never be exposed to browser code.
+Apply all files in `supabase/migrations/` in order, including `202608170001_contributor_impact.sql`, then run `supabase/seed.sql` against the project. The seed includes clearly synthetic community-trend demo clusters for local/demo environments; it is not real user-submitted data. The server-only `SUPABASE_SECRET_KEY` must never be exposed to browser code.
+
+For a local database without deploying the Next.js app, install the Supabase CLI, run `supabase start` from `app/`, then apply migrations with `supabase db reset`. Copy the local CLI's API URL, anon key, and service-role key into `.env.local`, restart `npm run dev`, and use the local app at `http://localhost:3000`.
 
 The migration enables row-level security for youth-owned records and creates the private `scam-evidence` storage bucket. The schema smoke checks are in `supabase/tests/phase1.sql`.
 
