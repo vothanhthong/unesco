@@ -79,15 +79,14 @@ export default function TriggerPage({ embedded = false, initialSessionId, initia
   const { locale, copy } = useLocale();
   const text = copy.trigger;
   const [initialContext] = useState(() => getInitialTriggerContext(initialSessionId, initialScenarioSlug));
-  const initialScenario = initialContext.scenario ? localizeScenario(initialContext.scenario, locale) : null;
   const [step, setStep] = useState<"pairing" | "dashboard" | "sent">("pairing");
   const [code, setCode] = useState(initialContext.sessionId);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionStatus, setSessionStatus] = useState<SessionStatus | null>(null);
-  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(initialScenario);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(initialContext.scenario?.id ?? null);
   const [activeGroup, setActiveGroup] = useState<ScenarioGroup>("message");
-  const [editedSender, setEditedSender] = useState(initialScenario?.sender ?? "");
-  const [editedContent, setEditedContent] = useState(initialScenario?.content ?? "");
+  const [editedSender, setEditedSender] = useState<string | null>(null);
+  const [editedContent, setEditedContent] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -116,7 +115,7 @@ export default function TriggerPage({ embedded = false, initialSessionId, initia
   };
 
   const handleSelectScenario = (s: Scenario) => {
-    setSelectedScenario(s);
+    setSelectedScenarioId(s.id);
     setEditedSender(s.sender);
     setEditedContent(s.content);
   };
@@ -131,8 +130,8 @@ export default function TriggerPage({ embedded = false, initialSessionId, initia
         body: JSON.stringify({
           session_id: sessionId,
           type: "sms",
-          sender: editedSender,
-          content: editedContent,
+          sender: editedSender ?? selectedScenario.sender,
+          content: editedContent ?? selectedScenario.content,
         }),
       });
       setSessionStatus("triggered");
@@ -165,6 +164,9 @@ export default function TriggerPage({ embedded = false, initialSessionId, initia
   }, [sessionStatus]);
 
   const localizedScenarios = SCENARIOS.map((scenario) => localizeScenario(scenario, locale));
+  const selectedScenario = selectedScenarioId === null
+    ? null
+    : localizedScenarios.find((scenario) => scenario.id === selectedScenarioId) ?? null;
   const visibleScenarios = localizedScenarios.filter((scenario) => scenario.group === activeGroup);
   const groupMeta = text.groups;
   const statusLabels = {
@@ -179,7 +181,9 @@ export default function TriggerPage({ embedded = false, initialSessionId, initia
   const resetScenario = () => {
     setStep("dashboard");
     setSessionStatus("paired");
-    setSelectedScenario(null);
+    setSelectedScenarioId(null);
+    setEditedSender(null);
+    setEditedContent(null);
     setError("");
   };
 
@@ -202,9 +206,9 @@ export default function TriggerPage({ embedded = false, initialSessionId, initia
       setCode("");
       setSessionId(null);
       setSessionStatus(null);
-      setSelectedScenario(null);
-      setEditedSender("");
-      setEditedContent("");
+      setSelectedScenarioId(null);
+      setEditedSender(null);
+      setEditedContent(null);
     } catch {
       setError(text.closeError);
     } finally {
@@ -303,7 +307,9 @@ export default function TriggerPage({ embedded = false, initialSessionId, initia
                     className={activeGroup === group ? styles.activeCategory : styles.categoryButton}
                     onClick={() => {
                       setActiveGroup(group);
-                      setSelectedScenario(null);
+                      setSelectedScenarioId(null);
+                      setEditedSender(null);
+                      setEditedContent(null);
                       setError("");
                     }}
                     aria-pressed={activeGroup === group}
@@ -328,7 +334,9 @@ export default function TriggerPage({ embedded = false, initialSessionId, initia
                     className={`${styles.scenarioButton} ${selectedScenario?.id === scenario.id ? styles.selectedScenario : ""}`}
                     onClick={() => {
                       if (selectedScenario?.id === scenario.id) {
-                        setSelectedScenario(null);
+                        setSelectedScenarioId(null);
+                        setEditedSender(null);
+                        setEditedContent(null);
                         return;
                       }
                       handleSelectScenario(scenario);
@@ -356,8 +364,12 @@ export default function TriggerPage({ embedded = false, initialSessionId, initia
                     </div>
                     <button
                       className={styles.iconButton}
-                      onClick={() => setSelectedScenario(null)}
-                       aria-label={text.closeEditor}
+                      onClick={() => {
+                        setSelectedScenarioId(null);
+                        setEditedSender(null);
+                        setEditedContent(null);
+                      }}
+                      aria-label={text.closeEditor}
                     >
                       <X size={18} />
                     </button>
@@ -368,7 +380,7 @@ export default function TriggerPage({ embedded = false, initialSessionId, initia
                    <Input
                       id="sender"
                       type="text"
-                      value={editedSender}
+                      value={editedSender ?? selectedScenario.sender}
                       onChange={(event) => setEditedSender(event.target.value)}
                     />
                   </div>
@@ -378,7 +390,7 @@ export default function TriggerPage({ embedded = false, initialSessionId, initia
                      <Textarea
                       id="message"
                       rows={7}
-                      value={editedContent}
+                      value={editedContent ?? selectedScenario.content}
                       onChange={(event) => setEditedContent(event.target.value)}
                     />
                      <p className={styles.helper}>{text.editHelper}</p>
@@ -388,7 +400,7 @@ export default function TriggerPage({ embedded = false, initialSessionId, initia
                   <Button
                     className={styles.shadcnButton}
                     onClick={handleSend}
-                    disabled={sending || !editedSender || !editedContent}
+                    disabled={sending || !(editedSender ?? selectedScenario.sender) || !(editedContent ?? selectedScenario.content)}
                   >
                     <Send data-icon="inline-start" aria-hidden="true" />
                      {sending ? text.sending : text.send}

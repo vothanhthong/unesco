@@ -15,8 +15,8 @@ export async function GET(request: Request) {
     .eq("is_verified", true)
     .not("title", "is", null)
     .not("summary", "is", null)
-    .order(sort === "trending" ? "is_trending" : "updated_at", { ascending: false })
     .order(sort === "trending" ? "upvote_count" : "updated_at", { ascending: false })
+    .order(sort === "trending" ? "updated_at" : "upvote_count", { ascending: false })
     .limit(20);
 
   if (error) {
