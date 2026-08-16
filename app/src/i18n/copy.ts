@@ -39,6 +39,23 @@ export const COPY = {
       reviewFirst: "Ưu tiên đánh giá",
       trustTitle: "Niềm tin đến từ sự minh bạch.",
       trustBody: "Mọi tình huống đều do con người soạn thảo và đánh giá trước khi đến với gia đình.",
+      howToStart: {
+        eyebrow: "CÁCH BẮT ĐẦU",
+        heading: "Cùng thực hành, từng quyết định an toàn một.",
+        learner: {
+          label: "NGƯỜI HỌC",
+          description: "Dành cho người lớn tuổi và người học trong gia đình.",
+          steps: ["Mở mục Bắt đầu với vai trò Người học", "Chia sẻ mã gồm 4 chữ số hiển thị trên màn hình", "Chờ Người hướng dẫn khởi động một tình huống", "Phản hồi theo cách bạn thường làm - ban đầu chưa có đáp án đúng", "Học từ kết quả và thử lại"],
+        },
+        trainer: {
+          label: "NGƯỜI HƯỚNG DẪN",
+          description: "Dành cho con cháu và người đồng hành.",
+          steps: ["Mở mục Bắt đầu với vai trò Người hướng dẫn", "Nhập mã gồm 4 chữ số của Người học", "Chọn một tình huống lừa đảo từ Thư viện tình huống", "Kích hoạt mô phỏng và để Người học tự quyết định", "Cùng nhìn lại: Bạn đã nhận thấy điều gì?"],
+        },
+        closing: "Người hướng dẫn tạo ra tình huống. Người học là người đưa ra quyết định.",
+        learnerLink: "Đến trang Người học →",
+        trainerLink: "Đến trang Người hướng dẫn →",
+      },
     },
     login: {
       eyebrow: "Công cụ / Truy cập người hướng dẫn",
@@ -340,6 +357,23 @@ export const COPY = {
       reviewFirst: "Review-first",
       trustTitle: "Trust grows through transparency.",
       trustBody: "People write and review every scenario before it reaches a family practice session.",
+      howToStart: {
+        eyebrow: "HOW TO START",
+        heading: "Practise together, one safe decision at a time.",
+        learner: {
+          label: "LEARNER",
+          description: "For older adults & family learners.",
+          steps: ["Open Start as a Learner", "Share the 4-digit code shown on your screen", "Wait for the Trainer to launch a scenario", "Respond as you normally would - no right answer at first", "Learn from the outcome → Retry"],
+        },
+        trainer: {
+          label: "TRAINER",
+          description: "For children, grandchildren & Buddies.",
+          steps: ["Open Start as a Trainer", "Enter the learner's 4-digit code", "Choose a scam from the Scenario Library", "Trigger the simulation and let the learner decide", "Debrief together: What did you notice?"],
+        },
+        closing: "The Trainer creates the situation. The Learner makes the decision.",
+        learnerLink: "Go to Learner →",
+        trainerLink: "Go to Trainer →",
+      },
     },
     login: {
       eyebrow: "Toolkit / Facilitator access",
