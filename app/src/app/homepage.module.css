@@ -160,13 +160,13 @@
 
 .topLeftGroup { top: 15%; left: 6%; width: clamp(110px, 13vw, 210px); aspect-ratio: 16 / 10; }
 .topLeftPhone { top: 33%; left: 8%; width: clamp(130px, 16vw, 250px); aspect-ratio: 16 / 10; }
-.topRightSupport { top: 13%; right: 18%; width: clamp(120px, 14vw, 225px); aspect-ratio: 4 / 3; }
+.topRightSupport { top: 10%; right: 15%; width: clamp(120px, 14vw, 225px); aspect-ratio: 4 / 3; }
 .topRightGroup { top: 25%; right: 5%; width: clamp(150px, 17vw, 270px); aspect-ratio: 16 / 10; }
-.lowerLeftPortrait { bottom: 8%; left: 5%; width: clamp(110px, 12vw, 180px); aspect-ratio: 3 / 4; }
-.lowerLeftSupport { bottom: 8%; left: 20%; width: clamp(90px, 10vw, 150px); aspect-ratio: 1; }
-.lowerCentre { bottom: 30%; left: 18%; width: clamp(110px, 12vw, 190px); aspect-ratio: 16 / 10; }
-.lowerRightPortrait { bottom: 8%; right: 5%; width: clamp(140px, 16vw, 250px); aspect-ratio: 16 / 10; }
-.lowerRightSupport { bottom: 8%; right: 23%; width: clamp(120px, 14vw, 220px); aspect-ratio: 16 / 10; }
+.lowerLeftPortrait { bottom: 12%; left: 5%; width: clamp(80px, 10vw, 150px); aspect-ratio: 3 / 4; }
+.lowerLeftSupport { bottom: 8%; left: 16%; width: clamp(90px, 10vw, 150px); aspect-ratio: 1; }
+.lowerCentre { bottom: 30%; left: 15%; width: clamp(110px, 12vw, 190px); aspect-ratio: 16 / 10; }
+.lowerRightPortrait { bottom: 8%; right: 5%; width: clamp(100px, 12vw, 200px); aspect-ratio: 12 / 10; }
+.lowerRightSupport { bottom: 8%; right: 18%; width: clamp(120px, 14vw, 220px); aspect-ratio: 16 / 10; }
 .lowerRightSmall { bottom: 30%; right: 6%; width: clamp(180px, 20vw, 300px); aspect-ratio: 16 / 10; }
 
 .simulator {
