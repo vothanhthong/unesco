@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import LearnerSimulator from "./LearnerSimulator";
 
-export default function LearnerRedirect() {
-  redirect("/");
+export default function LearnerPage() {
+  return <LearnerSimulator />;
 }
