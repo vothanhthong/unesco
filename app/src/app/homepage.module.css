@@ -12,16 +12,18 @@
 .hero {
   position: relative;
   display: grid;
-  min-height: max(780px, 100dvh);
+  min-height: 100svh;
+  max-height: 100svh;
   place-items: center;
-  padding: 82px 24px 54px;
+  padding: 44px 24px;
   isolation: isolate;
+  overflow: hidden;
 }
 
 .content {
   position: relative;
-  z-index: 2;
-  width: min(100%, 780px);
+  z-index: 10;
+  width: min(100%, 760px);
   text-align: center;
 }
 
@@ -129,19 +131,43 @@
 .scrollLink span { transition: transform 160ms ease; }
 .scrollLink:hover span { transform: translateY(3px); }
 
-.collage { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.desktopCollage { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.mobileUnescoMark { display: none; }
+
+.unescoMark {
+  position: absolute;
+  top: 7%;
+  left: 7%;
+  z-index: 1;
+  padding-bottom: 4px;
+  border-bottom: 2px solid var(--blue);
+  color: var(--blue-deep);
+  font-size: 0.76rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+}
 
 .photo {
   position: absolute;
-  background-image: url("/second-thought-homepage.jpg");
-  background-repeat: no-repeat;
+  margin: 0;
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   pointer-events: auto;
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
-.photo:hover { z-index: 3; box-shadow: 0 8px 20px rgba(17, 17, 17, 0.14); transform: scale(1.02); }
+.photo:hover { z-index: 3; transform: scale(1.02); }
+
+.topLeftGroup { top: 15%; left: 6%; width: clamp(110px, 13vw, 210px); aspect-ratio: 16 / 10; }
+.topLeftPhone { top: 33%; left: 8%; width: clamp(130px, 16vw, 250px); aspect-ratio: 16 / 10; }
+.topRightSupport { top: 13%; right: 18%; width: clamp(120px, 14vw, 225px); aspect-ratio: 4 / 3; }
+.topRightGroup { top: 25%; right: 5%; width: clamp(150px, 17vw, 270px); aspect-ratio: 16 / 10; }
+.lowerLeftPortrait { bottom: 8%; left: 5%; width: clamp(110px, 12vw, 180px); aspect-ratio: 3 / 4; }
+.lowerLeftSupport { bottom: 8%; left: 20%; width: clamp(90px, 10vw, 150px); aspect-ratio: 1; }
+.lowerCentre { bottom: 30%; left: 18%; width: clamp(110px, 12vw, 190px); aspect-ratio: 16 / 10; }
+.lowerRightPortrait { bottom: 8%; right: 5%; width: clamp(140px, 16vw, 250px); aspect-ratio: 16 / 10; }
+.lowerRightSupport { bottom: 8%; right: 23%; width: clamp(120px, 14vw, 220px); aspect-ratio: 16 / 10; }
+.lowerRightSmall { bottom: 30%; right: 6%; width: clamp(180px, 20vw, 300px); aspect-ratio: 16 / 10; }
 
 .simulator {
   scroll-margin-top: 20px;
@@ -157,25 +183,43 @@
 .futureSurface { display: grid; min-height: 150px; place-items: center; margin-top: 40px; border: 2px solid var(--blue); background: var(--paper); color: var(--blue-deep); }
 .futureSurface span { font-size: 0.75rem; font-weight: 850; letter-spacing: 0.12em; }
 
-@media (max-width: 1120px) {
-  .hero { min-height: 850px; }
-  .photo { transform: scale(0.88); }
+@media (min-width: 1440px) {
+  .fullCollage .photo { min-width: 0; }
 }
 
-@media (max-width: 760px) {
-  .hero { display: block; min-height: auto; padding: 100px 20px 48px; }
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .hero { padding: 36px 24px; }
+  .content { width: min(100%, 620px); }
+  .title { font-size: clamp(4.6rem, 9vw, 6.3rem); }
+  .statement { max-width: 590px; margin-top: 18px; font-size: clamp(0.96rem, 1.7vw, 1.12rem); }
+  .actions { margin-top: 20px; }
+  .topLeftGroup { top: 13%; left: 4%; width: clamp(200px, 24vw, 320px); }
+  .topLeftPhone { top: auto; bottom: 10%; left: 4%; width: clamp(220px, 26vw, 360px); }
+  .topRightSupport { top: 15%; right: 4%; width: clamp(200px, 24vw, 320px); }
+  .topRightGroup { top: auto; right: 4%; bottom: 15%; width: clamp(200px, 25vw, 350px); }
+}
+
+@media (max-width: 1023px) {
+  .hero { min-height: 100svh; max-height: none; padding: 42px 20px; }
+  .content { width: min(100%, 680px); }
+  .desktopCollage { display: none; }
+  .mobileUnescoMark { display: block; width: fit-content; margin: 0 auto 18px; padding-bottom: 4px; border-bottom: 2px solid var(--blue); color: var(--blue-deep); font-size: 0.76rem; font-weight: 850; letter-spacing: 0.14em; }
+}
+
+@media (max-width: 767px) {
+  .hero { padding: 30px 20px; }
   .content { width: 100%; }
-  .title { font-size: clamp(3.25rem, 16.5vw, 4.35rem); line-height: 0.9; }
+  .tagline { margin-bottom: 10px; font-size: clamp(1.125rem, 5vw, 1.35rem); }
+  .title { font-size: clamp(3.25rem, 15vw, 4.5rem); line-height: 0.9; }
   .thought { margin-top: 7px; }
-  .statement { margin-top: 20px; font-size: 1rem; }
+  .statement { margin-top: 18px; font-size: clamp(0.94rem, 4vw, 1.05rem); line-height: 1.55; }
+  .actions { margin-top: 20px; }
   .roleLinks { flex-direction: column; gap: 10px; }
   .roleLink { width: 100%; min-height: 50px; }
-  .collage { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 38px auto 0; width: min(100%, 560px); }
-  .photo { position: relative; inset: auto; width: 100% !important; height: auto !important; min-height: 0; opacity: 1 !important; transform: none !important; }
-  .photoLandscape { aspect-ratio: 16 / 10; }
-  .photoPortrait { aspect-ratio: 3 / 4; }
-  .photo:first-child { grid-column: span 2; max-width: 180px; aspect-ratio: 16 / 5; justify-self: start; box-shadow: none; }
-  .simulator { padding: 76px 20px; }
+}
+
+@media (max-height: 760px) and (min-width: 1024px) and (max-width: 1439px) {
+  .laptopCollage { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -16,9 +16,11 @@ interface CommunityCluster {
   report_count: number;
   contributor_count: number;
   upvote_count: number;
+  lesson_addition_count: number;
   is_trending: boolean;
   has_voted: boolean;
-  is_saved: boolean;
+  has_added_to_lesson: boolean;
+  is_shared_by_current_user: boolean;
 }
 
 type FeedSort = "latest" | "trending";
@@ -53,7 +55,9 @@ export default function CommunityTrends() {
 
   async function handleUpvote(clusterId: string) {
     const selected = clusters.find((cluster) => cluster.id === clusterId);
-    if (!selected || selected.has_voted) return;
+    if (!selected) return;
+    const nextVoted = !selected.has_voted;
+    setClusters((current) => current.map((cluster) => cluster.id === clusterId ? { ...cluster, has_voted: nextVoted, upvote_count: cluster.upvote_count + (nextVoted ? 1 : -1) } : cluster));
     setVotingId(clusterId);
     setError("");
     try {
@@ -63,8 +67,8 @@ export default function CommunityTrends() {
         const data = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(data?.error || text.error);
       }
-      setClusters((current) => current.map((cluster) => cluster.id === clusterId ? { ...cluster, has_voted: true, upvote_count: cluster.upvote_count + 1 } : cluster));
     } catch (voteError) {
+      setClusters((current) => current.map((cluster) => cluster.id === clusterId ? { ...cluster, has_voted: selected.has_voted, upvote_count: selected.upvote_count } : cluster));
       setError(voteError instanceof Error ? voteError.message : text.error);
     } finally {
       setVotingId(null);
@@ -73,7 +77,15 @@ export default function CommunityTrends() {
 
   async function handleAddToLesson(clusterId: string) {
     const selected = clusters.find((cluster) => cluster.id === clusterId);
-    if (!selected || selected.is_saved) return;
+    if (!selected) return;
+    if (selected.has_added_to_lesson) {
+      setSavingId(clusterId);
+      const response = await fetch(`/api/contribute/community/${clusterId}/lesson`, { method: "DELETE" });
+      if (response.ok) setClusters((current) => current.map((cluster) => cluster.id === clusterId ? { ...cluster, has_added_to_lesson: false, lesson_addition_count: Math.max(0, cluster.lesson_addition_count - 1) } : cluster));
+      else setError(text.error);
+      setSavingId(null);
+      return;
+    }
     setSavingId(clusterId);
     setError("");
     try {
@@ -87,7 +99,7 @@ export default function CommunityTrends() {
         const data = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(data?.error || text.error);
       }
-      setClusters((current) => current.map((cluster) => cluster.id === clusterId ? { ...cluster, is_saved: true } : cluster));
+      setClusters((current) => current.map((cluster) => cluster.id === clusterId ? { ...cluster, has_added_to_lesson: true, lesson_addition_count: cluster.lesson_addition_count + 1 } : cluster));
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : text.error);
     } finally {
@@ -145,22 +157,23 @@ export default function CommunityTrends() {
                 <h3>{cluster.title}</h3>
                 <p>{cluster.summary}</p>
                 <small>{cluster.report_count} {text.reports} · {cluster.contributor_count} {text.contributors}</small>
+                <small>{cluster.upvote_count} people found this helpful · Added to {cluster.lesson_addition_count} lessons {cluster.is_shared_by_current_user && "· Shared by you"}</small>
               </div>
                <div className={styles.communityCardActions}>
                  <button
-                   className={`${styles.lessonButton} ${cluster.is_saved ? styles.lessonButtonActive : ""}`}
+                   className={`${styles.lessonButton} ${cluster.has_added_to_lesson ? styles.lessonButtonActive : ""}`}
                    type="button"
-                   disabled={cluster.is_saved || savingId === cluster.id}
-                   aria-pressed={cluster.is_saved}
+                   disabled={savingId === cluster.id}
+                   aria-pressed={cluster.has_added_to_lesson}
                    onClick={() => handleAddToLesson(cluster.id)}
                  >
-                   {cluster.is_saved ? <Check size={16} aria-hidden="true" /> : <BookOpen size={16} aria-hidden="true" />}
-                   <span>{cluster.is_saved ? text.addedToLesson : savingId === cluster.id ? text.adding : text.addToLesson}</span>
+                   {cluster.has_added_to_lesson ? <Check size={16} aria-hidden="true" /> : <BookOpen size={16} aria-hidden="true" />}
+                   <span>{cluster.has_added_to_lesson ? text.addedToLesson : savingId === cluster.id ? text.adding : text.addToLesson}</span>
                  </button>
                  <button
                    className={`${styles.upvoteButton} ${cluster.has_voted ? styles.upvoteButtonActive : ""}`}
                    type="button"
-                   disabled={cluster.has_voted || votingId === cluster.id}
+                   disabled={votingId === cluster.id}
                    aria-pressed={cluster.has_voted}
                    onClick={() => handleUpvote(cluster.id)}
                  >

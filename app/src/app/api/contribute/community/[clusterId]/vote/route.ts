@@ -23,16 +23,16 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
   if (clusterError || !cluster) return NextResponse.json({ error: "Community scenario not found" }, { status: 404 });
 
-  const { error } = await auth.supabase.from("scam_cluster_votes").insert({
-    cluster_id: cluster.id,
-    voter_id: auth.user.id,
-  });
-
-  if (error?.code === "23505") return NextResponse.json({ error: "You already upvoted this scenario" }, { status: 409 });
-  if (error) {
-    console.error("[CONTRIBUTE] Failed to upvote community scenario", error);
-    return NextResponse.json({ error: "Unable to upvote this scenario" }, { status: 500 });
-  }
-
-  return NextResponse.json({ voted: true });
+  const { data: existing, error: existingError } = await auth.supabase
+    .from("scam_cluster_votes")
+    .select("id")
+    .eq("cluster_id", cluster.id)
+    .eq("voter_id", auth.user.id)
+    .maybeSingle();
+  if (existingError) return NextResponse.json({ error: "Unable to check helpful vote" }, { status: 500 });
+  const { error } = existing
+    ? await auth.supabase.from("scam_cluster_votes").delete().eq("id", existing.id)
+    : await auth.supabase.from("scam_cluster_votes").insert({ cluster_id: cluster.id, voter_id: auth.user.id });
+  if (error) return NextResponse.json({ error: "Unable to update helpful vote" }, { status: 500 });
+  return NextResponse.json({ voted: !existing });
 }

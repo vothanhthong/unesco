@@ -43,7 +43,10 @@ export async function POST(request: Request) {
     console.error("[TRAIN] Failed to check saved community lesson", existingError);
     return NextResponse.json({ error: "Unable to check saved lesson" }, { status: 500 });
   }
-  if (existing) return NextResponse.json({ data: existing, saved: true });
+  if (existing) {
+    await auth.supabase.from("scam_cluster_lesson_additions").upsert({ cluster_id: cluster.id, user_id: auth.user.id, lesson_id: existing.id }, { onConflict: "cluster_id,user_id" });
+    return NextResponse.json({ data: existing, saved: true });
+  }
 
   const isEnglish = locale === "en";
   const { data: scenario, error: scenarioError } = await auth.supabase
@@ -69,6 +72,13 @@ export async function POST(request: Request) {
     console.error("[TRAIN] Failed to save community lesson", scenarioError);
     return NextResponse.json({ error: "Unable to save community lesson" }, { status: 500 });
   }
+
+  const { error: additionError } = await auth.supabase.from("scam_cluster_lesson_additions").upsert({
+    cluster_id: cluster.id,
+    user_id: auth.user.id,
+    lesson_id: scenario.id,
+  }, { onConflict: "cluster_id,user_id" });
+  if (additionError) return NextResponse.json({ error: "Unable to record lesson addition" }, { status: 500 });
 
   return NextResponse.json({ data: scenario, saved: true }, { status: 201 });
 }
