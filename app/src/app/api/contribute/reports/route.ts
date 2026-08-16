@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedContext } from "@/lib/auth/server";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { scamReportSchema } from "@/lib/validation";
 
 const MAX_ATTACHMENTS = 5;
@@ -133,6 +134,39 @@ export async function POST(request: Request) {
       console.error("[CONTRIBUTE] Failed to record evidence", attachmentError);
       return NextResponse.json({ error: "Unable to record private evidence" }, { status: 500 });
     }
+  }
+
+  const description = parsed.data.description.trim();
+  const title = description.split(/[.!?\n]/, 1)[0].trim().slice(0, 160) || "Community report";
+  const isEnglish = parsed.data.locale.toLowerCase().startsWith("en");
+  const publisher = getSupabaseAdminClient();
+  if (!publisher) {
+    await auth.supabase.storage.from("scam-evidence").remove(uploadedPaths);
+    await auth.supabase.from("scam_reports").delete().eq("id", report.id).eq("owner_id", auth.user.id);
+    return NextResponse.json({ error: "Community publishing is not configured" }, { status: 503 });
+  }
+
+  const { error: clusterError } = await publisher.from("scam_clusters").insert({
+    fingerprint: `report-${report.id}`,
+    category: parsed.data.source_type,
+    locale: parsed.data.locale,
+    title,
+    summary: description,
+    title_en: isEnglish ? title : null,
+    summary_en: isEnglish ? description : null,
+    report_count: 1,
+    contributor_count: 1,
+    reviewer_count: 0,
+    upvote_count: 0,
+    is_verified: true,
+    is_trending: false,
+  });
+
+  if (clusterError) {
+    await auth.supabase.storage.from("scam-evidence").remove(uploadedPaths);
+    await auth.supabase.from("scam_reports").delete().eq("id", report.id).eq("owner_id", auth.user.id);
+    console.error("[CONTRIBUTE] Failed to publish community report", clusterError);
+    return NextResponse.json({ error: "Unable to publish the community report" }, { status: 500 });
   }
 
   return NextResponse.json({ report }, { status: 201 });

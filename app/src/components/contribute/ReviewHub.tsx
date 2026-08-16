@@ -14,12 +14,68 @@ interface ReviewDraft {
   snapshot: { title?: string; summary?: string; category?: string };
 }
 
+interface ReviewCopy {
+  approve: string;
+  reject: string;
+  approving: string;
+  rejecting: string;
+  reviewSuccess: string;
+  reviewError: string;
+  [key: string]: string;
+}
+
+function ReviewDraftItem({ draft, text, onResolved }: { draft: ReviewDraft; text: ReviewCopy; onResolved: (message: string) => void }) {
+  const [busyAction, setBusyAction] = useState<"approve" | "reject" | null>(null);
+  const [error, setError] = useState("");
+
+  async function handleAction(action: "approve" | "reject") {
+    setBusyAction(action);
+    setError("");
+    try {
+      const response = await fetch(`/api/contribute/review/${draft.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error || text.reviewError);
+      }
+      onResolved(text.reviewSuccess);
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : text.reviewError);
+      setBusyAction(null);
+    }
+  }
+
+  return (
+    <article className={styles.reviewQueueItem}>
+      <div className={styles.reviewDraftContent}>
+        <strong>{draft.snapshot.title || text.untitled}</strong>
+        <small>{draft.snapshot.category || text.communityReport}</small>
+        {draft.snapshot.summary && <p>{draft.snapshot.summary}</p>}
+        {error && <span className={styles.formError} role="alert">{error}</span>}
+        <div className={styles.reviewActions}>
+          <button className={styles.reviewApproveButton} type="button" disabled={busyAction !== null} onClick={() => handleAction("approve")}>
+            {busyAction === "approve" ? text.approving : text.approve}
+          </button>
+          <button className={styles.reviewRejectButton} type="button" disabled={busyAction !== null} onClick={() => handleAction("reject")}>
+            {busyAction === "reject" ? text.rejecting : text.reject}
+          </button>
+        </div>
+      </div>
+      <span>{draft.status === "in_review" ? text.inReview : text.draft}</span>
+    </article>
+  );
+}
+
 export default function ReviewHub() {
   const { copy } = useLocale();
   const text = copy.contribute.reviewHub;
   const [authState, setAuthState] = useState<"loading" | "unauthenticated" | "not_reviewer" | "authorized">("loading");
   const [drafts, setDrafts] = useState<ReviewDraft[]>([]);
   const [error, setError] = useState("");
+  const [actionMessage, setActionMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -76,17 +132,10 @@ export default function ReviewHub() {
         </div>
       )}
       {!error && authState === "authorized" && drafts.length === 0 && <p className={styles.emptyCopy}>{text.noDrafts}</p>}
+      {!error && actionMessage && <p className={styles.formMessage} role="status">{actionMessage}</p>}
       {!error && authState === "authorized" && drafts.length > 0 && (
         <div className={styles.reviewQueue}>
-          {drafts.map((draft) => (
-            <article key={draft.id} className={styles.reviewQueueItem}>
-              <div>
-                <strong>{draft.snapshot.title || text.untitled}</strong>
-                <small>{draft.snapshot.category || text.communityReport}</small>
-              </div>
-              <span>{draft.status === "in_review" ? text.inReview : text.draft}</span>
-            </article>
-          ))}
+          {drafts.map((draft) => <ReviewDraftItem key={draft.id} draft={draft} text={text} onResolved={(message) => { setDrafts((current) => current.filter((item) => item.id !== draft.id)); setActionMessage(message); }} />)}
         </div>
       )}
     </section>

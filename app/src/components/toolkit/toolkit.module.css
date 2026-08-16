@@ -2301,6 +2301,53 @@
   font-size: 0.7rem;
 }
 
+.reviewDraftContent {
+  min-width: 0;
+}
+
+.reviewDraftContent p {
+  max-width: 70ch;
+  margin: 8px 0 0;
+  color: var(--toolkit-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.reviewActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.reviewApproveButton,
+.reviewRejectButton {
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--toolkit-line);
+  border-radius: 7px;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 760;
+  cursor: pointer;
+}
+
+.reviewApproveButton {
+  background: var(--toolkit-blue);
+  color: #ffffff;
+}
+
+.reviewRejectButton {
+  background: transparent;
+  color: var(--toolkit-muted);
+}
+
+.reviewApproveButton:disabled,
+.reviewRejectButton:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .reviewQueueItem > span {
   flex: 0 0 auto;
   padding: 4px 7px;

@@ -80,4 +80,9 @@ export const scamReportSchema = z.object({
   redaction_confirmed: z.literal(true),
 });
 
+export const reviewActionSchema = z.object({
+  action: z.enum(["approve", "reject"]),
+  reason: z.string().trim().max(1_000).optional(),
+});
+
 export type ScamPayloadInput = z.infer<typeof scamPayloadSchema>;
