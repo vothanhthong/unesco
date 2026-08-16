@@ -527,7 +527,7 @@ export const COPY = {
       delete: "Delete message",
       linkHint: "Or tap the link above to see what happens",
       message: "Message",
-      failedTitle: "You fell for the scam",
+       failedTitle: "You failed to spot the scam",
       failedBody: "This was a simulation. Never open links asking for money, account verification, or prizes. Verify through an independent channel.",
       passedTitle: "You handled it safely",
        passedBody: "You recognized and deleted the suspicious message. Stay cautious with urgent requests, strange links, and money transfers.",
